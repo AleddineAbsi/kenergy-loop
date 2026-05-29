@@ -2,10 +2,9 @@
 //
 // buildMonthlyReport() assembles the last 30 days of readings + the latest
 // AI plan + the user's profile into a structured DTO the /report page
-// renders. emailMonthlyReport() ships the report via Resend (through the
-// Lovable connector gateway). If RESEND_API_KEY is not configured, the
-// server fn returns a friendly { ok: false, reason } object so the UI can
-// nudge the user.
+// renders. emailMonthlyReport() ships the report via Resend. If
+// RESEND_API_KEY is not configured, the server fn returns a friendly
+// { ok: false, reason } object so the UI can nudge the user.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -163,9 +162,8 @@ export const emailMonthlyReport = createServerFn({ method: "POST" })
     const email = (claims as { email?: string })?.email;
     if (!email) return { ok: false as const, reason: "no-email" };
 
-    const lovableKey = process.env.LOVABLE_API_KEY;
     const resendKey = process.env.RESEND_API_KEY;
-    if (!lovableKey || !resendKey) {
+    if (!resendKey) {
       return { ok: false as const, reason: "missing-secret" as const };
     }
 
@@ -224,12 +222,11 @@ export const emailMonthlyReport = createServerFn({ method: "POST" })
 
     const html = reportHtml(report);
 
-    const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": resendKey,
+        Authorization: `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
         from: "Kenergy <onboarding@resend.dev>",

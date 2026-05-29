@@ -7,7 +7,18 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { consumeDiagnosisCredit } from "./access.functions";
 
-const MODEL = "google/gemini-3-flash-preview";
+const GEMINI_MODEL = "gemini-2.5-flash";
+
+function getAIConfig() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+
+  return {
+    apiKey,
+    model: process.env.KENERGY_AI_MODEL ?? GEMINI_MODEL,
+    url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  };
+}
 
 export type ProductTier = "budget" | "balanced" | "integrated";
 export type ProductPick = {
@@ -69,11 +80,9 @@ const diagnosisTool = {
         grade: { type: "string", enum: ["A", "B", "C", "D", "E", "F", "G"] },
         goal_alignment: { type: "string", description: "How the plan matches the user's stated goal (cost/CO2/comfort)." },
         data_quality: { type: "string", enum: ["low", "medium", "high"] },
-        next_steps: { type: "array", items: { type: "string" }, maxItems: 6 },
+        next_steps: { type: "array", items: { type: "string" } },
         product_picks: {
-          type: "array",
-          maxItems: 12,
-          description:
+          type: "array",          description:
             "Concrete product picks. Group across tiers: budget (cheapest viable), balanced (best value), integrated (works inside an open ecosystem like Matter / Home Assistant). Only include picks that are genuinely useful for THIS user.",
           items: {
             type: "object",
@@ -88,14 +97,10 @@ const diagnosisTool = {
               api_capability: { type: "string", description: "Matter | Zigbee | Local API | Cloud webhook | None." },
               dashboard_ready: { type: "boolean", description: "True if it exposes data we can later plot in the Kenergy dashboard." },
             },
-            required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],
-            additionalProperties: false,
-          },
+            required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],          },
         },
         ecosystem_kit: {
-          type: "object",
-          nullable: true,
-          description: "Optional bundle of devices that talk to each other (e.g. all Matter, or all on one hub) so the user can later see them in one dashboard. Skip when not justified.",
+          type: "object",          description: "Optional bundle of devices that talk to each other (e.g. all Matter, or all on one hub) so the user can later see them in one dashboard. Skip when not justified.",
           properties: {
             name: { type: "string" },
             description: { type: "string" },
@@ -117,14 +122,10 @@ const diagnosisTool = {
                   api_capability: { type: "string" },
                   dashboard_ready: { type: "boolean" },
                 },
-                required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],
-                additionalProperties: false,
-              },
+                required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],              },
             },
           },
-          required: ["name", "description", "hub", "interoperability", "total_eur", "items"],
-          additionalProperties: false,
-        },
+          required: ["name", "description", "hub", "interoperability", "total_eur", "items"],        },
       },
       required: [
         "summary",
@@ -136,9 +137,7 @@ const diagnosisTool = {
         "data_quality",
         "next_steps",
         "product_picks",
-      ],
-      additionalProperties: false,
-    },
+      ],    },
   },
 };
 
@@ -172,8 +171,7 @@ export const generateDeepDiagnosis = createServerFn({ method: "POST" })
       }
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
+    const ai = getAIConfig();
 
     const systemPrompt = `You are Kenergy Deep, an in-depth AI energy diagnostic for European homes (EUR, kWh, ~0.30 €/kWh, ~0.22 kg CO2/kWh).
 You have access to: the quick survey, the long-form profile, a list of uploaded bills/appliance photos (filename labels only), and free-form user notes.
@@ -189,17 +187,17 @@ Rules:
 
     const userPrompt = `Survey:\n${JSON.stringify(survey?.answers ?? {}, null, 2)}\n\nLong-form profile (${longForm?.progress ?? 0}%):\n${JSON.stringify(longForm?.answers ?? {}, null, 2)}\n\nUploads:\n${JSON.stringify(uploads ?? [], null, 2)}\n\nUser notes:\n${notes || "(none)"}`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(ai.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model: ai.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [diagnosisTool],
-        tool_choice: { type: "function", function: { name: "return_deep_diagnosis" } },
+        tool_choice: "auto",
       }),
     });
 
@@ -221,7 +219,7 @@ Rules:
     } catch {
       throw new Error("AI returned malformed JSON");
     }
-    plan.model = MODEL;
+    plan.model = ai.model;
     plan.generated_at = new Date().toISOString();
 
     const inputs_hash = hashInputs([survey?.answers, longForm?.answers, uploads, notes]);
@@ -233,7 +231,7 @@ Rules:
         plan: plan as never,
         inputs_hash,
         notes: notes || null,
-        model: MODEL,
+        model: ai.model,
       })
       .select("id, created_at, inputs_hash, notes, plan")
       .single();

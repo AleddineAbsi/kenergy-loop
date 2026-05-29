@@ -21,7 +21,7 @@ import { Route as LongFormRouteImport } from './routes/long-form'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AnalysisToolRouteImport } from './routes/analysis-tool'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ScanResultRouteImport } from './routes/scan.result'
+import { Route as ScanResultRouteImport } from './routes/scan_.result'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as KSlugRouteImport } from './routes/k.$slug'
 import { Route as CheckoutDeepAnalysisRouteImport } from './routes/checkout.deep-analysis'
@@ -88,9 +88,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScanResultRoute = ScanResultRouteImport.update({
-  id: '/result',
-  path: '/result',
-  getParentRoute: () => ScanRoute,
+  id: '/scan_/result',
+  path: '/scan/result',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SSlugRoute = SSlugRouteImport.update({
   id: '/s/$slug',
@@ -123,7 +123,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
   '/report': typeof ReportRoute
-  '/scan': typeof ScanRouteWithChildren
+  '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
@@ -142,7 +142,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
   '/report': typeof ReportRoute
-  '/scan': typeof ScanRouteWithChildren
+  '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
@@ -162,14 +162,14 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
   '/report': typeof ReportRoute
-  '/scan': typeof ScanRouteWithChildren
+  '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
   '/admin/monitoring': typeof AdminMonitoringRoute
   '/checkout/deep-analysis': typeof CheckoutDeepAnalysisRoute
   '/k/$slug': typeof KSlugRoute
   '/s/$slug': typeof SSlugRoute
-  '/scan/result': typeof ScanResultRoute
+  '/scan_/result': typeof ScanResultRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,7 +228,7 @@ export interface FileRouteTypes {
     | '/checkout/deep-analysis'
     | '/k/$slug'
     | '/s/$slug'
-    | '/scan/result'
+    | '/scan_/result'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,13 +241,14 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RecommendationsRoute: typeof RecommendationsRoute
   ReportRoute: typeof ReportRoute
-  ScanRoute: typeof ScanRouteWithChildren
+  ScanRoute: typeof ScanRoute
   SettingsRoute: typeof SettingsRoute
   SurveyRoute: typeof SurveyRoute
   AdminMonitoringRoute: typeof AdminMonitoringRoute
   CheckoutDeepAnalysisRoute: typeof CheckoutDeepAnalysisRoute
   KSlugRoute: typeof KSlugRoute
   SSlugRoute: typeof SSlugRoute
+  ScanResultRoute: typeof ScanResultRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -336,12 +337,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/scan/result': {
-      id: '/scan/result'
-      path: '/result'
+    '/scan_/result': {
+      id: '/scan_/result'
+      path: '/scan/result'
       fullPath: '/scan/result'
       preLoaderRoute: typeof ScanResultRouteImport
-      parentRoute: typeof ScanRoute
+      parentRoute: typeof rootRouteImport
     }
     '/s/$slug': {
       id: '/s/$slug'
@@ -374,16 +375,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ScanRouteChildren {
-  ScanResultRoute: typeof ScanResultRoute
-}
-
-const ScanRouteChildren: ScanRouteChildren = {
-  ScanResultRoute: ScanResultRoute,
-}
-
-const ScanRouteWithChildren = ScanRoute._addFileChildren(ScanRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalysisToolRoute: AnalysisToolRoute,
@@ -394,14 +385,25 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RecommendationsRoute: RecommendationsRoute,
   ReportRoute: ReportRoute,
-  ScanRoute: ScanRouteWithChildren,
+  ScanRoute: ScanRoute,
   SettingsRoute: SettingsRoute,
   SurveyRoute: SurveyRoute,
   AdminMonitoringRoute: AdminMonitoringRoute,
   CheckoutDeepAnalysisRoute: CheckoutDeepAnalysisRoute,
   KSlugRoute: KSlugRoute,
   SSlugRoute: SSlugRoute,
+  ScanResultRoute: ScanResultRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

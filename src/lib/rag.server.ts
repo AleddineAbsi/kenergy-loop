@@ -1,30 +1,29 @@
-// Server-only RAG helpers: embed text via Lovable AI Gateway and retrieve
-// the most relevant knowledge chunks from pgvector.
+// Server-only RAG helpers. The demo no longer depends on an external
+// embedding gateway; this deterministic local embedder keeps the knowledge
+// table utilities usable without another provider key.
+import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const EMBED_MODEL = "openai/text-embedding-3-small"; // 1536 dims — matches knowledge_chunks.embedding
+const EMBED_DIMS = 1536;
 
-export async function embedText(input: string | string[]): Promise<number[][]> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+function localEmbedding(text: string): number[] {
+  const vector = new Array<number>(EMBED_DIMS).fill(0);
+  const tokens = text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: EMBED_MODEL, input }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Embedding gateway failed (${res.status}): ${text.slice(0, 200)}`);
+  for (const token of tokens) {
+    const hash = createHash("sha256").update(token).digest();
+    const index = hash.readUInt32BE(0) % EMBED_DIMS;
+    const sign = hash[4] % 2 === 0 ? 1 : -1;
+    vector[index] += sign;
   }
 
-  const json = await res.json();
-  const data = (json?.data ?? []) as Array<{ embedding: number[] }>;
-  return data.map((d) => d.embedding);
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
+  return vector.map((value) => value / norm);
+}
+
+export async function embedText(input: string | string[]): Promise<number[][]> {
+  const values = Array.isArray(input) ? input : [input];
+  return values.map(localEmbedding);
 }
 
 export type KnowledgeChunk = {

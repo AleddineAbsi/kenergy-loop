@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Lock, LogOut, Menu, ShieldCheck, User, X, Zap } from "lucide-react";
+import { ChevronDown, Lock, LogOut, Menu, ShieldCheck, User, X, Zap } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccess } from "@/hooks/use-access";
 
 type NavLink = { to: string; label: string; locked?: boolean; adminOnly?: boolean };
+type NavGroup = { label: string; links: NavLink[] };
 
 export function SiteNav() {
   const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState<string | false>(false);
   const { user, signOut, loading } = useAuth();
   const { access } = useAccess();
   const navigate = useNavigate();
@@ -15,22 +17,44 @@ export function SiteNav() {
   async function handleSignOut() {
     await signOut();
     setOpen(false);
+    setMoreOpen(false);
     navigate({ to: "/" });
   }
 
-  const links: NavLink[] = [
+  const primaryLinks: NavLink[] = [
     { to: "/scan", label: "Scan-a-Room" },
     { to: "/survey", label: "Quick Survey" },
-    { to: "/long-form", label: "Deep Analysis", locked: !access.hasDeepAnalysis },
-    { to: "/recommendations", label: "Actions" },
-    { to: "/monitoring", label: "Monitor" },
-    { to: "/admin/monitoring", label: "Fleet", adminOnly: true },
-    { to: "/report", label: "Report" },
-    { to: "/pricing", label: "Pricing" },
-    { to: "/settings", label: "Settings" },
   ];
 
-  const visible = links.filter((l) => !l.adminOnly || access.isAdmin);
+  const navGroups: NavGroup[] = [
+    {
+      label: "Plan",
+      links: [
+        { to: "/recommendations", label: "Actions" },
+        { to: "/long-form", label: "Deep Analysis", locked: !access.hasDeepAnalysis },
+        { to: "/report", label: "Report" },
+      ],
+    },
+    {
+      label: "Track",
+      links: [
+        { to: "/monitoring", label: "Monitor" },
+        { to: "/admin/monitoring", label: "Fleet", adminOnly: true },
+      ],
+    },
+    {
+      label: "Account",
+      links: [
+        { to: "/pricing", label: "Pricing" },
+        { to: "/settings", label: "Settings" },
+      ],
+    },
+  ];
+
+  const visiblePrimary = primaryLinks.filter((l) => !l.adminOnly || access.isAdmin);
+  const visibleGroups = navGroups
+    .map((group) => ({ ...group, links: group.links.filter((l) => !l.adminOnly || access.isAdmin) }))
+    .filter((group) => group.links.length > 0);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur">
@@ -41,17 +65,51 @@ export function SiteNav() {
           </span>
           <span>Kenergy</span>
         </Link>
-        <nav className="hidden gap-1 md:flex">
-          {visible.map((l) => (
+        <nav className="hidden items-center gap-1 md:flex">
+          {visiblePrimary.map((l) => (
             <Link
               key={l.to}
               to={l.to}
+              onClick={() => setMoreOpen(false)}
               className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:text-primary"
             >
               {l.adminOnly && <ShieldCheck className="h-3 w-3 text-primary" />}
               {l.locked && <Lock className="h-3 w-3" />}
               {l.label}
             </Link>
+          ))}
+          {visibleGroups.map((group) => (
+            <div key={group.label} className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((value) => (value === group.label ? false : group.label))}
+                onBlur={() => window.setTimeout(() => setMoreOpen(false), 120)}
+                className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-haspopup="menu"
+                aria-expanded={moreOpen === group.label}
+              >
+                {group.label} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${moreOpen === group.label ? "rotate-180" : ""}`} />
+              </button>
+              {moreOpen === group.label && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-soft)]"
+                >
+                  {group.links.map((l) => (
+                    <Link
+                      key={l.to}
+                      to={l.to}
+                      onClick={() => setMoreOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:text-primary"
+                    >
+                      {l.adminOnly && <ShieldCheck className="h-3 w-3 text-primary" />}
+                      {l.locked && <Lock className="h-3 w-3" />}
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
@@ -92,7 +150,10 @@ export function SiteNav() {
       {open && (
         <nav className="border-t border-border/60 bg-background md:hidden">
           <div className="mx-auto flex max-w-6xl flex-col px-2 py-2">
-            {visible.map((l) => (
+            <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Start
+            </div>
+            {visiblePrimary.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
@@ -103,6 +164,25 @@ export function SiteNav() {
                 {l.locked && <Lock className="h-3 w-3" />}
                 {l.label}
               </Link>
+            ))}
+            {visibleGroups.map((group) => (
+              <div key={group.label}>
+                <div className="mt-2 px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </div>
+                {group.links.map((l) => (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    onClick={() => setOpen(false)}
+                    className="inline-flex items-center gap-2 rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:text-primary"
+                  >
+                    {l.adminOnly && <ShieldCheck className="h-3 w-3 text-primary" />}
+                    {l.locked && <Lock className="h-3 w-3" />}
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
             ))}
             <div className="my-2 h-px bg-border" />
             {user ? (

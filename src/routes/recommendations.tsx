@@ -18,6 +18,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { ProductImage } from "@/components/product-image";
 import { categoryMeta, type ActionCategory } from "@/lib/mock-data";
 import { useAuth } from "@/hooks/use-auth";
 import { generateActionPlan, type AIActionPlan, type AIEffort } from "@/lib/action-plan.functions";
@@ -405,42 +406,55 @@ function RecommendationsPage() {
                     </span>
                   </div>
                 </div>
-                <ul className="mt-5 grid gap-3 md:grid-cols-2">
-                  {plan!.smart_home_kit.map((item) => {
-                    const Icon = kitIcon(item.name);
-                    return (
-                      <li
-                        key={item.name}
-                        className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]"
-                      >
-                        <div className="w-20 shrink-0">
-                          <ProductImage name={item.name} brand={item.brand_examples?.split(/[·,]/)[0]?.trim()} src={(item as { image_url?: string }).image_url} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <div className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                              <Icon className="h-3.5 w-3.5 text-primary" />
-                              {item.name}{" "}
-                              <span className="font-normal text-muted-foreground">× {item.qty}</span>
-                            </div>
-                            <div className="shrink-0 text-sm font-semibold">
-                              ~€{(item.qty * item.price_each_eur).toLocaleString()}
-                            </div>
+                <div className="relative mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <ul className="grid gap-3 md:grid-cols-2 pointer-events-none select-none blur-[3px]">
+                    {plan!.smart_home_kit.map((item) => {
+                      const Icon = kitIcon(item.name);
+                      return (
+                        <li
+                          key={item.name}
+                          className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]"
+                        >
+                          <div className="w-20 shrink-0">
+                            <ProductImage name={item.name} brand={item.brand_examples?.split(/[·,]/)[0]?.trim()} src={(item as { image_url?: string }).image_url} />
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.brand_examples} · checked for compatibility
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <div className="flex items-center gap-1.5 truncate text-sm font-semibold">
+                                <Icon className="h-3.5 w-3.5 text-primary" />
+                                {item.name}{" "}
+                                <span className="font-normal text-muted-foreground">× {item.qty}</span>
+                              </div>
+                              <div className="shrink-0 text-sm font-semibold">
+                                ~€{(item.qty * item.price_each_eur).toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.brand_examples} · checked for compatibility
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">{item.why}</div>
                           </div>
-                          <div className="mt-1 text-xs text-muted-foreground">{item.why}</div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="absolute inset-0 grid place-items-center rounded-2xl bg-background/70 p-5 backdrop-blur-[2px]">
+                    <div className="max-w-md text-center">
+                      <div className="text-base font-semibold">Smart home kit is part of deeper analysis</div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Unlock the paid deeper analysis to get the tailored kit, compatibility notes, assumptions, and advanced savings estimate.
+                      </p>
+                      <Link to="/checkout/deep-analysis" className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                        Open paid deeper analysis
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </section>
             )}
 
             <p className="mt-10 text-center text-[11px] text-muted-foreground">
-              Generated by {plan!.model ?? "Lovable AI"} · data quality: {plan!.data_quality}
+              Generated by {plan!.model ?? "Gemini"} · data quality: {plan!.data_quality}
               {plan!.cached ? " · cached" : ""} ·{" "}
               <Link to="/analysis-tool" className="hover:underline">
                 improve accuracy with the deeper analysis tool

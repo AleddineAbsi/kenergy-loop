@@ -1,12 +1,22 @@
 // AI-powered estimate from the 60-second survey answers.
 // Public server fn (no auth) — callable from the survey result screen for
-// guests and signed-in users alike. Uses Lovable AI Gateway with tool
+// guests and signed-in users alike. Uses Gemini with tool
 // calling for structured output. Returns can_estimate=false (with a kind
 // message) when the user skipped too much for any meaningful estimate.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const MODEL = "google/gemini-3-flash-preview";
+const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+function getAIConfig() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
+  return {
+    apiKey,
+    model: process.env.KENERGY_AI_MODEL ?? "gemini-2.5-flash",
+  };
+}
 
 export type SurveyEstimate = {
   can_estimate: boolean;
@@ -32,9 +42,7 @@ const tool = {
     description:
       "Return a personalized energy estimate from a 60-second survey. If too little information was provided, set can_estimate=false and explain kindly in `message`.",
     parameters: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
+      type: "object",      properties: {
         can_estimate: { type: "boolean" },
         message: {
           type: "string",
@@ -48,13 +56,8 @@ const tool = {
         co2_kg_saved_per_year: { type: "number" },
         data_quality: { type: "string", enum: ["low", "medium", "high"] },
         top_recommendations: {
-          type: "array",
-          minItems: 0,
-          maxItems: 5,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
+          type: "array",          items: {
+            type: "object",            properties: {
               title: { type: "string" },
               why: { type: "string" },
               savings_eur_per_year: { type: "number" },
@@ -82,7 +85,7 @@ function emptyEstimate(): SurveyEstimate {
   return {
     can_estimate: false,
     message:
-      "I can't calculate anything meaningful without at least a few answers — try adding your city, home size or monthly bill.",
+      "Answer at least 5 of the 6 quick questions first — especially size, heating type, and your biggest issue — and I can give you a meaningful estimate.",
     current_kwh_per_year: 0,
     potential_kwh_saved_per_year: 0,
     current_eur_per_year: 0,
@@ -104,21 +107,21 @@ export const estimateSurvey = createServerFn({ method: "POST" })
       ([, v]) => typeof v === "string" && v.trim().length > 0,
     );
 
-    // Hard short-circuit: nothing answered at all.
-    if (answered.length === 0) {
+    // Hard short-circuit: the quick estimate needs most of the 6 answers.
+    if (answered.length < 5) {
       return { ...emptyEstimate(), model: undefined };
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+    const ai = getAIConfig();
 
     const systemPrompt = `You are Kenergy, an AI energy optimizer for European rentals.
 Estimate the user's CURRENT yearly electricity + heating use and the POTENTIAL savings achievable with a smart-home kit.
 Assumptions: ~0.28 €/kWh blended, ~0.22 kg CO2 per kWh.
 
 Rules:
-- If the user skipped most questions (fewer than ~3 meaningful answers, or nothing about home size, heating, or spend), set can_estimate=false and explain kindly in \`message\` what's missing. Set all numbers to 0.
-- If you can estimate, be conservative when data is sparse — lower data_quality and lower potential savings accordingly.
+- The quick survey has 6 questions. If fewer than 5 meaningful answers are provided, set can_estimate=false and explain kindly in \`message\` that at least 5 answers are needed. Set all numbers to 0.
+- If 5 or 6 meaningful answers are provided, try to estimate conservatively even when one field is missing. Use reasonable European/German benchmark assumptions, state uncertainty in \`message\`, and set data_quality lower when needed.
+- Do not require a monthly bill; the quick survey intentionally estimates from city, tenure, size, people, heating type, and biggest issue.
 - potential_kwh_saved_per_year and potential_eur_saved_per_year must be a subset of the current usage (typically 8–22%).
 - Always reply by calling the return_survey_estimate tool.`;
 
@@ -128,20 +131,20 @@ Rules:
       2,
     )}`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(GEMINI_CHAT_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${ai.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: ai.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [tool],
-        tool_choice: { type: "function", function: { name: "return_survey_estimate" } },
+        tool_choice: "auto",
       }),
     });
 
@@ -172,5 +175,5 @@ Rules:
       throw new Error("AI returned malformed JSON");
     }
 
-    return { ...parsed, model: MODEL };
+    return { ...parsed, model: ai.model };
   });

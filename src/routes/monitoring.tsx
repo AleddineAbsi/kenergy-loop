@@ -179,6 +179,36 @@ const simHome: SimDevice[] = [
   },
 ];
 
+const simulatedWeeks: Week[] = [
+  { label: "W1", kwh: 428, cost_eur: 171.2 },
+  { label: "W2", kwh: 444, cost_eur: 177.6 },
+  { label: "W3", kwh: 461, cost_eur: 184.4 },
+  { label: "W4", kwh: 452, cost_eur: 180.8 },
+  { label: "W5", kwh: 438, cost_eur: 175.2 },
+  { label: "W6", kwh: 421, cost_eur: 168.4 },
+  { label: "W7", kwh: 403, cost_eur: 161.2 },
+  { label: "This week", kwh: 389, cost_eur: 155.6 },
+];
+
+const simulatedReadings: EnergyReading[] = [
+  {
+    id: "sim-reading-2",
+    reading_date: "2026-05-26",
+    kwh: 389,
+    cost_eur: 155.6,
+    source: "manual",
+    note: "Simulated latest weekly reading",
+  },
+  {
+    id: "sim-reading-1",
+    reading_date: "2026-05-19",
+    kwh: 403,
+    cost_eur: 161.2,
+    source: "manual",
+    note: "Simulated previous weekly reading",
+  },
+];
+
 function MonitoringPage() {
   const { user, loading: authLoading } = useAuth();
   const { access, loading: accessLoading } = useAccess();
@@ -308,7 +338,6 @@ function PreviewStat({ label, value, tone }: { label: string; value: string; ton
 }
 
 function SimDeviceMini({ d }: { d: SimDevice }) {
-  const Icon = d.status === "healthy" ? CheckCircle2 : AlertTriangle;
   const color = d.status === "healthy" ? "text-emerald-500" : d.status === "warning" ? "text-amber-500" : "text-destructive";
   return (
     <div className="rounded-md border border-border bg-card p-3 text-left">
@@ -317,7 +346,7 @@ function SimDeviceMini({ d }: { d: SimDevice }) {
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{d.category}</div>
           <div className="text-sm font-semibold">{d.name}</div>
         </div>
-        <Icon className={`h-4 w-4 ${color}`} />
+        <StatusHelp status={d.status} message={statusExplanation(d)} className={color} />
       </div>
       <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[10px]">
         <div className="rounded bg-muted p-1"><div className="font-semibold">{d.draw_w}W</div><div className="text-muted-foreground">live</div></div>
@@ -353,8 +382,13 @@ function FullDashboard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const readings = readingsQuery.data ?? [];
-  const weeks = useMemo(() => buildWeekly(readings), [readings]);
+  const realReadings = readingsQuery.data ?? [];
+  const readings = realReadings.length > 0 ? realReadings : simulatedReadings;
+  const weeks = useMemo(() => {
+    const realWeeks = buildWeekly(realReadings);
+    return realWeeks.length > 0 ? realWeeks : simulatedWeeks;
+  }, [realReadings]);
+  const usingSimulatedDashboard = realReadings.length === 0;
 
   const last = weeks[weeks.length - 1];
   const prev = weeks[weeks.length - 2];
@@ -362,7 +396,7 @@ function FullDashboard() {
   const monthlyEur = last?.cost_eur != null ? Math.round(last.cost_eur * 4.33) : null;
   const totalKwhSaved = weeks.length >= 2 ? Math.max(0, Math.round((weeks[0].kwh - last!.kwh) * weeks.length)) : 0;
   const co2Saved = Math.round(totalKwhSaved * 0.4);
-  const alerts = buildAlerts(weeks);
+  const alerts = buildAlerts(weeks, usingSimulatedDashboard);
 
   const simLiveW = simHome.reduce((s, d) => s + d.draw_w, 0);
   const simDailyKwh = simHome.reduce((s, d) => s + d.daily_kwh, 0);
@@ -463,10 +497,15 @@ function FullDashboard() {
         )}
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <Stat label="This week" value={last ? `${Math.round(last.kwh)} kWh` : "—"} hint={weekDeltaPct == null ? "Log 2+ readings to compare" : `${weekDeltaPct >= 0 ? "+" : ""}${weekDeltaPct}% vs last week`} trendDown={weekDeltaPct != null && weekDeltaPct <= 0} />
-          <Stat label="Monthly est." value={monthlyEur != null ? `€${monthlyEur}` : "—"} hint={monthlyEur != null ? "Based on latest week × 4.33" : "Add cost to readings"} />
+          <Stat label="This week" value={last ? `${Math.round(last.kwh)} kWh` : "—"} hint={weekDeltaPct == null ? "Log 2+ readings to compare" : `${weekDeltaPct >= 0 ? "+" : ""}${weekDeltaPct}% vs last week${usingSimulatedDashboard ? " · simulated" : ""}`} trendDown={weekDeltaPct != null && weekDeltaPct <= 0} />
+          <Stat label="Monthly est." value={monthlyEur != null ? `€${monthlyEur}` : "—"} hint={monthlyEur != null ? `Based on latest week × 4.33${usingSimulatedDashboard ? " · simulated" : ""}` : "Add cost to readings"} />
           <Stat label="CO₂ saved" value={`${co2Saved} kg`} hint={co2Saved > 0 ? "Since first reading" : "Track more to estimate"} />
         </div>
+        {usingSimulatedDashboard && (
+          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+            Demo mode: weekly trend, alerts, and recent readings use the same simulated household data as the appliance fleet.
+          </div>
+        )}
 
         {/* ── Live charts ──────────────────────────────────────────── */}
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -501,7 +540,13 @@ function FullDashboard() {
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={perDeviceKwh} layout="vertical" margin={{ left: 0, right: 8 }}>
-                  <XAxis type="number" hide />
+                  <XAxis
+                    type="number"
+                    unit=" kWh"
+                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <YAxis
                     type="category"
                     dataKey="name"
@@ -587,7 +632,11 @@ function FullDashboard() {
               <ul className="mt-3 space-y-2 text-sm">
                 {alerts.map((a) => (
                   <li key={a.id} className="flex items-start gap-2 rounded-lg border border-border p-3">
-                    {a.level === "warn" ? <AlertTriangle className="h-4 w-4 text-accent" /> : <Info className="h-4 w-4 text-primary" />}
+                    <StatusHelp
+                      status={a.level === "warn" ? "warning" : "healthy"}
+                      message={a.explanation}
+                      className={a.level === "warn" ? "text-amber-500" : "text-primary"}
+                    />
                     <span>{a.text}</span>
                   </li>
                 ))}
@@ -600,7 +649,7 @@ function FullDashboard() {
               <p className="mt-3 text-sm text-muted-foreground">Your last 10 readings will appear here.</p>
             ) : (
               <ul className="mt-3 space-y-1.5 text-sm">
-                {[...readings].reverse().slice(0, 10).map((r) => (
+                {[...readings].reverse().slice(0, 2).map((r) => (
                   <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
                     <div>
                       <div className="font-medium">
@@ -609,9 +658,11 @@ function FullDashboard() {
                       </div>
                       <div className="text-xs text-muted-foreground">{r.reading_date} · {r.source}</div>
                     </div>
-                    <button onClick={() => remove.mutate(r.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Delete reading">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!String(r.id).startsWith("sim-") && (
+                      <button onClick={() => remove.mutate(r.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Delete reading">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -628,7 +679,6 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
   const [openKit, setOpenKit] = useState(false);
   const tone =
     d.status === "deprecated" ? "border-destructive/40" : d.status === "warning" ? "border-amber-500/40" : "border-border";
-  const Icon = d.status === "healthy" ? CheckCircle2 : AlertTriangle;
   const color = d.status === "healthy" ? "text-emerald-500" : d.status === "warning" ? "text-amber-500" : "text-destructive";
 
   return (
@@ -638,7 +688,7 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{d.category}</div>
           <div className="mt-0.5 text-base font-semibold">{d.name}</div>
         </div>
-        <Icon className={`h-4 w-4 ${color}`} />
+        <StatusHelp status={d.status} message={statusExplanation(d)} className={color} />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
         <div className="rounded-md bg-muted p-2"><div className="font-semibold">{d.draw_w.toLocaleString()} W</div><div className="text-muted-foreground">live</div></div>
@@ -659,8 +709,14 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
             <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <div className="text-[10px] uppercase tracking-wide text-primary">Suggested swap</div>
               <div className="mt-2 flex gap-3">
-                <div className="w-20 shrink-0">
-                  <ProductImage name={d.replacement.product} brand={d.replacement.brand_examples.split(" · ")[0]} src={d.replacement.image_url} />
+                <div className="h-20 w-20 shrink-0">
+                  <ProductImage
+                    name={d.replacement.product}
+                    brand={d.replacement.brand_examples.split(" · ")[0]}
+                    src={d.replacement.image_url}
+                    aspect="aspect-square"
+                    className="h-full"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold">{d.replacement.product}</div>
@@ -677,8 +733,8 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
                   <ul className="mt-1 space-y-1.5">
                     {d.replacement.kit.map((k) => (
                       <li key={k.name} className="flex gap-2 rounded-md bg-background p-2 text-[11px]">
-                        <div className="w-12 shrink-0">
-                          <ProductImage name={k.name} src={k.image_url} aspect="aspect-square" />
+                        <div className="h-12 w-12 shrink-0">
+                          <ProductImage name={k.name} src={k.image_url} aspect="aspect-square" className="h-full" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
@@ -698,6 +754,41 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
       )}
     </div>
   );
+}
+
+function StatusHelp({
+  status,
+  message,
+  className,
+}: {
+  status: SimDevice["status"] | "healthy" | "warning";
+  message: string;
+  className?: string;
+}) {
+  const Icon = status === "healthy" ? CheckCircle2 : AlertTriangle;
+
+  return (
+    <span className="group relative inline-flex shrink-0">
+      <button type="button" aria-label="Explain status" className={`rounded-full ${className ?? ""}`}>
+        <Icon className="h-4 w-4" />
+      </button>
+      <span className="pointer-events-none absolute right-0 top-6 z-20 hidden w-64 rounded-xl border border-border bg-popover p-3 text-left text-xs font-normal leading-relaxed text-popover-foreground shadow-[var(--shadow-soft)] group-hover:block group-focus-within:block">
+        {message}
+      </span>
+    </span>
+  );
+}
+
+function statusExplanation(d: SimDevice) {
+  if (d.status === "healthy") {
+    return `${d.name} is inside the expected range for this simulated week. No immediate action needed.`;
+  }
+
+  if (d.status === "warning") {
+    return d.note ?? `${d.name} is using more energy than expected. Check settings, standby mode, or usage schedule.`;
+  }
+
+  return d.note ?? `${d.name} looks inefficient compared with a modern replacement. Review the suggested swap and verify with a meter reading.`;
 }
 
 function AddReadingForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
@@ -815,18 +906,36 @@ function isoWeekKey(d: Date) {
   return `${tmp.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 
-function buildAlerts(weeks: Week[]) {
-  const out: { id: string; level: "warn" | "info"; text: string }[] = [];
+function buildAlerts(weeks: Week[], simulated = false) {
+  const out: { id: string; level: "warn" | "info"; text: string; explanation: string }[] = [];
   if (weeks.length < 2) return out;
   const last = weeks[weeks.length - 1];
   const prev = weeks[weeks.length - 2];
   if (prev.kwh > 0) {
     const pct = ((last.kwh - prev.kwh) / prev.kwh) * 100;
     if (pct >= 20) {
-      out.push({ id: "spike", level: "warn", text: `Consumption jumped ${Math.round(pct)}% vs last week — check standby loads and heating settings.` });
+      out.push({
+        id: "spike",
+        level: "warn",
+        text: `Consumption jumped ${Math.round(pct)}% vs last week.`,
+        explanation: "This alert fires when the latest weekly kWh is at least 20% higher than the previous week. Check heating settings, always-on devices, or unusual appliance use.",
+      });
     } else if (pct <= -10) {
-      out.push({ id: "drop", level: "info", text: `Nice — you used ${Math.round(-pct)}% less than last week. Keep it up!` });
+      out.push({
+        id: "drop",
+        level: "info",
+        text: `Nice - you used ${Math.round(-pct)}% less than last week.`,
+        explanation: "This positive alert appears when weekly kWh drops by at least 10%. In this demo, the drop is coherent with the lower simulated readings and reduced appliance load.",
+      });
     }
+  }
+  if (simulated) {
+    out.push({
+      id: "fridge",
+      level: "warn",
+      text: "Kitchen fridge is still the biggest inefficient load.",
+      explanation: "The simulated fridge uses 3.9 kWh/day, far above a modern efficient fridge. That is why it is marked red and has a replacement suggestion.",
+    });
   }
   return out;
 }

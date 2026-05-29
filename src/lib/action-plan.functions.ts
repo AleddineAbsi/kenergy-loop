@@ -1,7 +1,7 @@
-// Phase 3 — Real AI action plan via the Lovable AI Gateway.
+// Phase 3 — Real AI action plan via Gemini.
 //
 // generateActionPlan() reads the signed-in user's quick survey + long-form
-// answers, asks the Lovable AI Gateway for a structured action plan via
+// answers, asks Gemini for a structured action plan via
 // tool-calling, caches the result in `ai_action_plans` keyed by a hash of
 // the inputs, and returns it. The cache is busted whenever survey or
 // long-form answers change.
@@ -10,7 +10,18 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const MODEL = "google/gemini-3-flash-preview";
+const GEMINI_MODEL = "gemini-2.5-flash";
+
+function getAIConfig() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+
+  return {
+    apiKey,
+    model: process.env.KENERGY_AI_MODEL ?? GEMINI_MODEL,
+    url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  };
+}
 
 export type AICategory = "do-now" | "small-helper" | "add-info" | "needs-landlord" | "monitor";
 export type AIEffort = "easy" | "medium" | "hard";
@@ -75,10 +86,7 @@ const planTool = {
           description: "How confident we are given how much profile data is filled in.",
         },
         recommendations: {
-          type: "array",
-          minItems: 0,
-          maxItems: 12,
-          description:
+          type: "array",          description:
             "Only include recommendations that are genuinely useful for this user. Do NOT pad to fill categories — skip any category that has nothing meaningful to suggest. Order is irrelevant (the UI re-sorts).",
           items: {
             type: "object",
@@ -117,9 +125,7 @@ const planTool = {
                   "Concrete next step. For hardware: name the device type, what it does, and WHO to contact (e.g. 'a certified electrician / Elektriker', 'your landlord', 'a heating engineer / Heizungsmonteur') and roughly how to find one. For DIY: 2-4 step instructions.",
               },
               sources: {
-                type: "array",
-                maxItems: 4,
-                description:
+                type: "array",                description:
                   "When possible, cite the basis for the savings number: agency reports (BfEE, ADEME, dena, IEA, Eurostat), vendor specs, or a well-known study. Skip rather than invent.",
                 items: {
                   type: "object",
@@ -127,9 +133,7 @@ const planTool = {
                     label: { type: "string" },
                     url: { type: "string" },
                   },
-                  required: ["label"],
-                  additionalProperties: false,
-                },
+                  required: ["label"],                },
               },
             },
             required: [
@@ -143,15 +147,10 @@ const planTool = {
               "why",
               "how_it_works",
               "how_to_proceed",
-            ],
-            additionalProperties: false,
-          },
+            ],          },
         },
         smart_home_kit: {
-          type: "array",
-          minItems: 0,
-          maxItems: 6,
-          description: "Curated, compatibility-checked smart home kit sized to the user's home. Skip entirely if nothing is justified.",
+          type: "array",          description: "Curated, compatibility-checked smart home kit sized to the user's home. Skip entirely if nothing is justified.",
           items: {
             type: "object",
             properties: {
@@ -161,9 +160,7 @@ const planTool = {
               price_each_eur: { type: "number" },
               why: { type: "string" },
             },
-            required: ["name", "qty", "brand_examples", "price_each_eur", "why"],
-            additionalProperties: false,
-          },
+            required: ["name", "qty", "brand_examples", "price_each_eur", "why"],          },
         },
       },
       required: [
@@ -176,9 +173,7 @@ const planTool = {
         "data_quality",
         "recommendations",
         "smart_home_kit",
-      ],
-      additionalProperties: false,
-    },
+      ],    },
   },
 };
 
@@ -246,22 +241,16 @@ export const generateActionPlan = createServerFn({ method: "POST" })
       }
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    const ai = getAIConfig();
 
-    // RAG: retrieve relevant knowledge chunks based on the user's profile.
-    const { retrieveKnowledge, formatChunksForPrompt } = await import("./rag.server");
-    const ragQuery = [
-      survey?.answers ? JSON.stringify(survey.answers) : "",
-      longForm?.answers ? JSON.stringify(longForm.answers) : "",
-      "smart home energy savings recommendations for EU rental",
-    ].join(" ");
-    const knowledge = await retrieveKnowledge(ragQuery, { matchCount: 6 }).catch((e) => {
-      console.error("RAG retrieval failed, continuing without knowledge:", e);
-      return [];
-    });
+    const knowledgeText = [
+      "- Smart thermostats and TRVs can reduce heating energy by roughly 8-20% when schedules and room-level setpoints replace manual heating.",
+      "- Standby power is often small per device but meaningful across many always-on appliances; smart plugs and power strips help identify and cut waste.",
+      "- Heat pumps, EV chargers, dishwashers, washing machines, and dryers benefit from tariff-aware scheduling when the household has a dynamic or day/night tariff.",
+      "- Old fridges, freezers, TVs, servers, and pumps are common high-consumption replacement candidates when age, noise, heat, or high standby draw is visible.",
+      "- Renters should prefer reversible measures first: schedules, TRVs where allowed, smart plugs, presence sensors, LED lighting, and monitoring before fixed electrical work.",
+      "- For electrical work, sub-metering, or hardwired devices, recommend a certified electrician. For heating hydraulics and boiler changes, recommend a heating engineer and landlord approval when rented.",
+    ].join("\n");
 
     const systemPrompt = `You are Kenergy, an AI energy optimizer for smart home appliances in European rentals (EUR, kWh, ~0.28 €/kWh, ~0.22 kg CO2 per kWh).
 You build a personalized action plan from the user's quick survey and (optional) long-form profile.
@@ -277,7 +266,7 @@ Rules:
 - Be conservative on savings if data is sparse — set data_quality accordingly.
 - Always reply by calling the return_action_plan tool. Never reply with plain text.`;
 
-    const userPrompt = `Knowledge Base (retrieved snippets, most relevant first):\n${formatChunksForPrompt(knowledge)}\n\nQuick survey answers:\n${JSON.stringify(
+    const userPrompt = `Knowledge Base:\n${knowledgeText}\n\nQuick survey answers:\n${JSON.stringify(
       survey?.answers ?? {},
       null,
       2,
@@ -288,20 +277,20 @@ Rules:
     )}`;
 
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(ai.url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${ai.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: ai.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [planTool],
-        tool_choice: { type: "function", function: { name: "return_action_plan" } },
+        tool_choice: "auto",
       }),
     });
 
@@ -313,7 +302,7 @@ Rules:
       if (res.status === 402) {
         throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
       }
-      console.error("Lovable AI Gateway error:", res.status, text);
+      console.error("Gemini API error:", res.status, text);
       throw new Error(`AI gateway failed (${res.status})`);
     }
 
@@ -340,7 +329,7 @@ Rules:
           user_id: userId,
           plan: plan as never,
           inputs_hash,
-          model: MODEL,
+          model: ai.model,
         },
         { onConflict: "user_id" },
       );
@@ -348,5 +337,5 @@ Rules:
       console.error("Cache upsert failed:", upsertError);
     }
 
-    return { ...plan, model: MODEL, cached: false } satisfies AIActionPlan;
+    return { ...plan, model: ai.model, cached: false } satisfies AIActionPlan;
   });

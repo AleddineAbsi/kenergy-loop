@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, FileText, History, Image as ImageIcon, Loader2, Lock, MessageSquare, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, ChevronDown, FileText, Headphones, History, Image as ImageIcon, Loader2, Lock, Mail, MessageSquare, Sparkles, Trash2, Upload, Wand2, Wrench, X } from "lucide-react";
 import { SiteFooter, SiteNav } from "@/components/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccess } from "@/hooks/use-access";
@@ -753,6 +753,34 @@ function DiagnosisTab() {
 
 function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
   const p = record.plan;
+  const [technicianOpen, setTechnicianOpen] = useState(false);
+  const [landlordOpen, setLandlordOpen] = useState(false);
+  const [landlordEmail, setLandlordEmail] = useState("");
+  const [supportTarget, setSupportTarget] = useState<string | null>(null);
+  const [docsTarget, setDocsTarget] = useState<string | null>(null);
+  const mainIntervention =
+    p.ecosystem_kit?.items?.[0]?.name ??
+    p.product_picks?.[0]?.name ??
+    "radiator controls and heating schedule optimization";
+  const landlordPreview = `Subject: Request to approve a small energy-saving improvement
+
+Hello,
+
+I used Kenergy to review my home energy profile and it identified a practical intervention that could reduce consumption without changing the building structure.
+
+Technical summary:
+- Recommended intervention: ${mainIntervention}
+- Estimated annual saving potential: about €${Math.round(p.yearly_savings_eur)} and ${Math.round(p.yearly_kwh)} kWh
+- Current diagnosis grade: ${p.grade} (score ${p.energy_score})
+- Data quality: ${p.data_quality}
+- Work requested: permission for a technician to inspect compatibility and, if suitable, install or adjust the relevant control hardware.
+
+This should be treated as a low-impact efficiency measure. No structural work is requested at this stage. I can share the full Kenergy report and any documents needed before booking a technician.
+
+Could you confirm whether this is allowed and whether you have a preferred technician or process?
+
+Best regards,`;
+  const actionPlanCards = buildDeepActionCards(p);
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -773,6 +801,64 @@ function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
           <Mini label="Data" value={p.data_quality} />
         </div>
       </div>
+
+      <Section title="Actionable implementation steps">
+        <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h4 className="font-semibold">Prioritized AI action plan</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sorted like the quick survey: low-friction steps first, then actions that need a product, landlord approval, or a technician.
+              </p>
+            </div>
+            <span className="rounded-full bg-background px-3 py-1 text-xs font-semibold text-primary">
+              up to €{Math.round(p.yearly_savings_eur)}/year
+            </span>
+          </div>
+          <ul className="mt-4 grid gap-3 md:grid-cols-3">
+            {actionPlanCards.map((action, i) => (
+              <li key={`${action.title}-${i}`} className="rounded-xl border border-border bg-background p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                    ~€{action.savings}/yr
+                  </span>
+                </div>
+                <h5 className="mt-3 text-sm font-semibold">{action.title}</h5>
+                <p className="mt-1 text-xs text-muted-foreground">{action.why}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+                  <span className="rounded-full bg-muted px-2 py-0.5">{action.friction}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5">{action.owner}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <ActionStepCard
+            icon={<Mail className="h-4 w-4" />}
+            title="Ask for approval"
+            text="For rental homes, Kenergy prepares a landlord-ready message with the estimated savings, intervention type, and technical context."
+            action="Preview landlord email"
+            onClick={() => setLandlordOpen(true)}
+          />
+          <ActionStepCard
+            icon={<Wrench className="h-4 w-4" />}
+            title="Choose a technician"
+            text="Book a compatible heating or smart-home technician for inspection, installation, or radiator control setup."
+            action="Choose technician"
+            onClick={() => setTechnicianOpen(true)}
+          />
+          <ActionStepCard
+            icon={<FileText className="h-4 w-4" />}
+            title="Prepare documents"
+            text="Collect recent bills, room photos, meter readings, heating type, and landlord contact details so the recommendation can be verified."
+          />
+        </div>
+      </Section>
 
       <Section title="Concrete product picks">
         {p.product_picks?.length ? (
@@ -811,12 +897,32 @@ function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
       {p.ecosystem_kit && (
         <Section title="Compatible ecosystem kit">
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-            <div className="flex items-baseline justify-between gap-2">
-              <h4 className="font-semibold">{p.ecosystem_kit.name}</h4>
-              <span className="text-sm">€{p.ecosystem_kit.total_eur}</span>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="font-semibold">{p.ecosystem_kit.name}</h4>
+                <p className="mt-1 text-xs text-muted-foreground">{p.ecosystem_kit.description}</p>
+              </div>
+              <span className="rounded-full bg-background px-3 py-1 text-sm font-semibold">€{p.ecosystem_kit.total_eur}</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{p.ecosystem_kit.description}</p>
             <p className="mt-1 text-[11px] text-muted-foreground"><strong>Hub:</strong> {p.ecosystem_kit.hub} · {p.ecosystem_kit.interoperability}</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setSupportTarget(`${p.ecosystem_kit.name} technical team`)}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-primary/30 bg-background px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                <Headphones className="h-3.5 w-3.5" />
+                Contact kit technical team
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocsTarget(`${p.ecosystem_kit.name} installation kit`)}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                Open kit documentation
+              </button>
+            </div>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {p.ecosystem_kit.items.map((x) => (
                 <li key={x.id} className="rounded-md bg-background p-3">
@@ -826,6 +932,24 @@ function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
                   </div>
                   <div className="text-[10px] text-muted-foreground">{x.brand_examples}</div>
                   <p className="mt-1 text-xs text-muted-foreground">{x.why}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSupportTarget(x.name)}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
+                    >
+                      <Headphones className="h-3 w-3" />
+                      Technical team
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDocsTarget(x.name)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      Product docs
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -845,8 +969,219 @@ function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
           </ol>
         </Section>
       )}
+
+      {technicianOpen && (
+        <Modal title="Choose technicians" onClose={() => setTechnicianOpen(false)}>
+          <p className="text-sm text-muted-foreground">
+            Demo preview: Kenergy would match the action plan with local technicians who can inspect compatibility and complete the installation.
+          </p>
+          <div className="mt-4 space-y-3">
+            {[
+              ["ThermoCheck Berlin", "Radiator valve inspection + smart thermostat fitting", "€89 inspection", "4.8"],
+              ["EcoHaus Service", "Heating balancing and control optimization", "€129 visit", "4.6"],
+              ["SmartHeat Partner", "Matter-ready thermostat and sensor setup", "€149 setup", "4.7"],
+            ].map(([name, scope, price, rating]) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setTechnicianOpen(false)}
+                className="w-full rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold">{name}</span>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">★ {rating}</span>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{scope}</p>
+                <p className="mt-2 text-xs font-medium">{price} · demo selection</p>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {landlordOpen && (
+        <Modal title="Landlord email preview" onClose={() => setLandlordOpen(false)}>
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="landlord-email">
+            Landlord email
+          </label>
+          <input
+            id="landlord-email"
+            value={landlordEmail}
+            onChange={(e) => setLandlordEmail(e.target.value)}
+            placeholder="landlord@example.com"
+            className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
+            <pre className="whitespace-pre-wrap text-xs leading-relaxed text-foreground">{landlordPreview}</pre>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Demo only: this preview shows how Kenergy would prepare the message. No email is sent from this page.
+          </p>
+        </Modal>
+      )}
+
+      {supportTarget && (
+        <Modal title="Technical team contact" onClose={() => setSupportTarget(null)}>
+          <p className="text-sm text-muted-foreground">
+            Demo preview: Kenergy would route this request to the product or kit technical team with your diagnosis attached.
+          </p>
+          <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Selected item</div>
+            <div className="mt-1 font-semibold">{supportTarget}</div>
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div className="rounded-lg bg-background p-3">
+                <div className="font-medium">Support request</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Compatibility check, installation requirements, wiring constraints, and hub setup questions.
+                </p>
+              </div>
+              <div className="rounded-lg bg-background p-3">
+                <div className="font-medium">Attached context</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Home type, heating system, diagnosis grade, estimated savings, and selected kit components.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+              onClick={() => setSupportTarget(null)}
+            >
+              Request callback demo
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-2 text-xs font-semibold"
+              onClick={() => setSupportTarget(null)}
+            >
+              Start support chat demo
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {docsTarget && (
+        <Modal title="Technical documentation" onClose={() => setDocsTarget(null)}>
+          <p className="text-sm text-muted-foreground">
+            Demo preview: Kenergy would collect the official setup guide, compatibility notes, API capability, and maintenance documents for this product.
+          </p>
+          <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Documentation bundle</div>
+            <div className="mt-1 font-semibold">{docsTarget}</div>
+            <ul className="mt-4 space-y-2 text-sm">
+              {[
+                "Installation checklist and required tools",
+                "Compatibility notes for heating valves, hubs, Wi-Fi, Matter, or Zigbee",
+                "Manufacturer setup guide and troubleshooting steps",
+                "Data/API capabilities for monitoring dashboards",
+                "Warranty, maintenance, and safety documentation",
+              ].map((item) => (
+                <li key={item} className="flex gap-2 rounded-md bg-background p-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Demo only: these buttons show the product direction. Real manufacturer links can be connected later.
+          </p>
+        </Modal>
+      )}
     </div>
   );
+}
+
+function ActionStepCard({
+  icon,
+  title,
+  text,
+  action,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+  action?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2">
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-primary">{icon}</span>
+        <h4 className="font-semibold">{title}</h4>
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">{text}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={onClick}
+          className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          {action}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/70 p-4 backdrop-blur-sm">
+      <div className="max-h-[85vh] w-full max-w-xl overflow-auto rounded-2xl border border-border bg-card p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function buildDeepActionCards(plan: DeepDiagnosisRecord["plan"]) {
+  const total = Math.max(45, Math.round(plan.yearly_savings_eur || 0));
+  const firstProduct = plan.product_picks?.[0];
+  const dashboardProduct = plan.product_picks?.find((x) => x.dashboard_ready) ?? firstProduct;
+  const firstStep = plan.next_steps?.[0];
+
+  return [
+    {
+      title: firstStep ?? "Tune heating schedule and radiator controls",
+      why:
+        "Start with the lowest-friction behavior or setting change before buying hardware. It gives a clean before/after baseline for the rest of the plan.",
+      savings: Math.max(8, Math.round(total * 0.18)),
+      friction: "Do it yourself",
+      owner: "No approval first",
+    },
+    {
+      title: dashboardProduct ? `Install ${dashboardProduct.name}` : "Install the first monitoring-ready device",
+      why: dashboardProduct
+        ? dashboardProduct.why
+        : "A monitoring-ready device helps prove what changed and makes future recommendations more accurate.",
+      savings: Math.max(18, Math.round(total * 0.38)),
+      friction: "Small product",
+      owner: dashboardProduct?.dashboard_ready ? "Dashboard-ready" : "Optional monitoring",
+    },
+    {
+      title: "Get approval or a technician for the higher-impact work",
+      why:
+        "If the plan touches radiator valves, heating balancing, wiring, or permanent installation, Kenergy prepares the landlord message and technician context.",
+      savings: Math.max(24, Math.round(total * 0.44)),
+      friction: "Needs coordination",
+      owner: "Landlord / technician",
+    },
+  ];
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

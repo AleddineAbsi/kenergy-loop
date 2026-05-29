@@ -98,7 +98,7 @@ function CheckoutPage() {
                 {done ? "Unlocked — redirecting…" : "Simulate purchase (€19) — instant unlock"}
               </button>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Demo checkout — no real payment is processed. Plug in Stripe later via Lovable Payments.
+                Demo checkout — no real payment is processed. Plug in Stripe later for production billing.
               </p>
               {error && <p className="mt-3 text-center text-xs text-destructive">{error}</p>}
             </>

@@ -1,97 +1,389 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { LineChart, Leaf, Cpu, Timer, ShieldCheck, Sparkles } from "lucide-react";
-import { SiteNav, SiteFooter } from "@/components/site-nav";
+import {
+  BarChart3,
+  Camera,
+  ClipboardCheck,
+  Euro,
+  Gauge,
+  Leaf,
+  LineChart,
+  Mail,
+  MoveRight,
+  ShieldCheck,
+  Sparkles,
+  Timer,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { SiteFooter, SiteNav } from "@/components/site-nav";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kenergy — AI energy optimizer for smart home appliances" },
+      { title: "Kenergy - renter-first energy savings app" },
       {
         name: "description",
         content:
-          "Kenergy is an AI energy optimizer for smart home appliances. Build your energy profile in 60 seconds and unlock a personalized action plan that cuts your bill.",
+          "Kenergy turns a room photo and a short home profile into free renter-friendly energy-saving actions, deeper analysis, and consumption monitoring.",
       },
-      { property: "og:title", content: "Kenergy — AI energy optimizer for smart home appliances" },
+      { property: "og:title", content: "Kenergy - renter-first energy savings app" },
       {
         property: "og:description",
-        content: "60-second profile, AI action plan, real savings on your smart appliances.",
+        content: "Scan your room, get an energy score, unlock free saving actions, and track progress when you are ready.",
       },
     ],
   }),
   component: Index,
 });
 
+const features: Feature[] = [
+  {
+    icon: Camera,
+    eyebrow: "Fast entry point",
+    title: "Room scan",
+    body: "A photo scan detects visible machines, heating points, windows, cooling devices, and rough appliance consumption. It is useful for a quick first estimate before asking for detailed data.",
+    points: ["Visible appliance detection", "Confidence on detected objects", "Photo-based consumption estimate"],
+  },
+  {
+    icon: Timer,
+    eyebrow: "Free profile",
+    title: "Free 60-second profile",
+    body: "The short survey builds the basic energy profile: home size, building type, heating system, household size, biggest problem, and budget. The result is immediate and does not require a smart meter.",
+    points: ["Personalized home context", "Budget-aware recommendations", "Immediate result"],
+  },
+  {
+    icon: ClipboardCheck,
+    eyebrow: "Decision engine",
+    title: "Actionable saving plan",
+    body: "Kenergy ranks actions and product suggestions from low-friction to high-friction, cheap to expensive, and small savings to larger yearly impact. It separates what the renter can do alone from items that need a landlord, technician, or another stakeholder.",
+    points: ["Do-it-yourself actions", "Landlord or technician actions", "Estimated yearly savings"],
+  },
+  {
+    icon: Users,
+    eyebrow: "Implementation support",
+    title: "Guided follow-through",
+    body: "The app does not stop at advice. It can guide the user through what to check, which documents to collect, where a technician may be needed, and how to explain the issue to a landlord.",
+    points: ["Checklist for each action", "Documents to gather", "Who needs to be involved"],
+  },
+  {
+    icon: Mail,
+    eyebrow: "Communication",
+    title: "AI-generated emails and reports",
+    body: "For actions that involve a landlord or technician, Kenergy can draft a professional message with the relevant technical details, the suspected issue, and the supporting context.",
+    points: ["Landlord-ready explanation", "Technical details included", "Clear non-legal wording"],
+  },
+  {
+    icon: Gauge,
+    eyebrow: "Reliability",
+    title: "Confidence, sources, and uncertainty",
+    body: "Every recommendation is tied to an accuracy level. If the system is unsure, it says so. When it uses external benchmarks or product knowledge, it explains the basis and shows sources where available.",
+    points: ["Confidence levels", "Sources when available", "Honest uncertainty"],
+  },
+  {
+    icon: BarChart3,
+    eyebrow: "Progressive profile",
+    title: "More data improves the result",
+    body: "The profile becomes more accurate as the user adds room photos, meter readings, bill uploads, completed actions, and real usage habits.",
+    points: ["Photos and bills", "Manual meter readings", "Completed-action feedback"],
+  },
+  {
+    icon: LineChart,
+    eyebrow: "Ongoing tracking",
+    title: "Monitoring dashboard",
+    body: "Monitoring tracks consumption trends, recent readings, alerts, monthly estimates, and appliance status. Smart devices can be connected through compatible ecosystems and standards such as Matter when available.",
+    points: ["Regular consumption baseline", "Broken or inefficient device alerts", "Smart-device integrations"],
+  },
+  {
+    icon: Euro,
+    eyebrow: "Business model",
+    title: "Free advice, paid monitoring",
+    body: "Kenergy keeps the core recommendations free. Paid value comes from longer history, alerts, reports, monitoring, automation, product comparisons, and deeper savings analysis.",
+    points: ["Free action plan", "Paid dashboard history", "Reports and alerts"],
+  },
+];
+
+type Feature = {
+  icon: LucideIcon;
+  eyebrow: string;
+  title: string;
+  body: string;
+  points: string[];
+};
+
 function Index() {
+  const mainRef = useRef<HTMLElement | null>(null);
+  const lockRef = useRef(false);
+  const revealTimerRef = useRef<number | null>(null);
+  const [visibleScene, setVisibleScene] = useState(0);
+
+  useEffect(() => {
+    const scenes = () => Array.from(document.querySelectorAll<HTMLElement>("[data-autoscene]"));
+
+    const reveal = (index: number) => {
+      if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
+      setVisibleScene(-1);
+      revealTimerRef.current = window.setTimeout(() => setVisibleScene(index), 380);
+    };
+
+    const closestScene = () => {
+      const viewportCenter = window.innerHeight / 2;
+      return scenes().reduce(
+        (best, scene, index) => {
+          const rect = scene.getBoundingClientRect();
+          const distance = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+          return distance < best.distance ? { index, distance } : best;
+        },
+        { index: 0, distance: Number.POSITIVE_INFINITY },
+      ).index;
+    };
+
+    const jumpTo = (index: number) => {
+      const allScenes = scenes();
+      const target = Math.max(0, Math.min(allScenes.length - 1, index));
+      const element = allScenes[target];
+      if (!element) return;
+
+      lockRef.current = true;
+      reveal(target);
+      const rect = element.getBoundingClientRect();
+      const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      window.setTimeout(() => {
+        lockRef.current = false;
+      }, 900);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) < 18 || lockRef.current) return;
+      const main = mainRef.current;
+      if (!main) return;
+      const bounds = main.getBoundingClientRect();
+      if (bounds.top > window.innerHeight * 0.1 || bounds.bottom < window.innerHeight * 0.9) return;
+
+      const allScenes = scenes();
+      const current = closestScene();
+      const direction = event.deltaY > 0 ? 1 : -1;
+      if ((direction < 0 && current === 0) || (direction > 0 && current === allScenes.length - 1)) return;
+
+      event.preventDefault();
+      jumpTo(current + direction);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (lockRef.current) return;
+        const best = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!best) return;
+        const index = Number((best.target as HTMLElement).dataset.autoscene);
+        if (!Number.isNaN(index)) reveal(index);
+      },
+      { threshold: [0.62] },
+    );
+
+    scenes().forEach((scene) => observer.observe(scene));
+    window.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      observer.disconnect();
+      if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <SiteNav />
-      <main>
-        <section className="relative overflow-hidden">
-          <div
-            className="absolute inset-0 -z-10 opacity-90"
-            style={{ background: "var(--gradient-hero)" }}
-            aria-hidden
-          />
-          <div className="mx-auto max-w-3xl px-4 py-24 text-center md:py-32">
-            <div className="text-primary-foreground">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs">
-                <Leaf className="h-3 w-3" /> AI energy optimizer for smart home appliances
-              </div>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                Lower your bill.<br />Automate every appliance.
-              </h1>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-primary-foreground/90">
-                Answer 12 quick questions and Kenergy's AI builds your home's energy profile,
-                ranks the actions that save the most, and sketches a smart-home kit you can
-                actually order.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link
-                  to="/survey"
-                  className="inline-flex items-center gap-2 rounded-md bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
-                >
-                  <Timer className="h-4 w-4" /> Start 60-second survey
-                </Link>
-                <Link
-                  to="/recommendations"
-                  className="inline-flex items-center rounded-md border border-white/30 px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-white/10"
-                >
-                  See sample action plan
-                </Link>
-              </div>
-              <p className="mt-4 text-xs text-primary-foreground/70">
-                No signup needed. Works without a smart meter.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-4 py-20">
-          <h2 className="text-3xl font-bold tracking-tight text-center">How it works</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              { icon: Timer, title: "1. 60-second survey", body: "Tell us about your home and appliances. No bills, no smart meter required." },
-              { icon: Cpu, title: "2. AI action plan", body: "We rank optimizations for every smart appliance by € saved and kg CO₂ avoided." },
-              { icon: LineChart, title: "3. Track savings", body: "Monitor consumption and watch your kWh drop week after week." },
-            ].map((f) => (
-              <div key={f.title} className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <f.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Private by default</span>
-            <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Grounded in a curated knowledge base</span>
-            <span className="inline-flex items-center gap-1.5"><Leaf className="h-3.5 w-3.5 text-primary" /> No vendor lock-in</span>
-          </div>
-        </section>
+      <main ref={mainRef} className="relative isolate snap-y snap-mandatory overflow-x-hidden">
+        <FixedGreenBackdrop />
+        <HeroSection visible={visibleScene === 0} />
+        <ProcessSection visible={visibleScene === 1} />
+        {features.map((feature, index) => (
+          <FeatureSection key={feature.title} feature={feature} index={index} visible={visibleScene === index + 2} />
+        ))}
+        <TrustSection />
       </main>
       <SiteFooter />
+    </div>
+  );
+}
+
+function HeroSection({ visible }: { visible: boolean }) {
+  return (
+    <section data-autoscene={0} className="relative z-10 grid min-h-screen snap-start place-items-center overflow-hidden">
+      <div className={`relative mx-auto max-w-3xl px-4 py-24 text-center text-primary-foreground transition-all duration-700 ${visible ? "translate-y-0 opacity-100 blur-0" : "translate-y-8 opacity-0 blur-md"}`}>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
+          <Leaf className="h-3 w-3" /> Renter-first energy savings
+        </div>
+        <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+          Scan your room.
+          <br />
+          Get your saving plan.
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-primary-foreground/90">
+          Kenergy starts with a visible room energy score, then turns it into free, practical actions renters can
+          actually take. Add your home profile, bills, or meter readings whenever you want more accuracy.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/scan"
+            className="inline-flex items-center gap-2 rounded-md bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+          >
+            <Camera className="h-4 w-4" /> Scan a room
+          </Link>
+          <Link
+            to="/survey"
+            className="inline-flex items-center gap-2 rounded-md border border-white/30 px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-white/10"
+          >
+            <Timer className="h-4 w-4" /> Free 60-second survey
+          </Link>
+        </div>
+        <p className="mt-4 text-xs text-primary-foreground/70">
+          Your digital energy consultant for scans, profiles, recommendations, reports, and monitoring.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function ProcessSection({ visible }: { visible: boolean }) {
+  const steps = [
+    ["Collect", "Photos, profile answers, bills, readings."],
+    ["Analyze", "Loads, building context, confidence."],
+    ["Identify", "Waste, risks, opportunities."],
+    ["Recommend", "Actions, products, reports, monitoring."],
+  ];
+
+  return (
+    <section data-autoscene={1} className="relative z-10 grid min-h-screen snap-start place-items-center overflow-hidden px-4 py-16">
+      <div className={`relative w-full max-w-6xl rounded-[2rem] border border-primary/15 bg-card/60 p-6 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-all duration-700 md:p-10 ${visible ? "translate-y-0 opacity-100 blur-0" : "translate-y-8 opacity-0 blur-md"}`}>
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight">How Kenergy fits together</h2>
+          <p className="mt-3 text-muted-foreground">
+            Kenergy works like a digital energy consultant: it collects the right context, estimates where energy
+            is going, identifies realistic opportunities, and turns them into clear next steps.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] md:items-stretch">
+          {steps.map(([title, body], index) => (
+            <div key={title} className="contents">
+              <div className="relative overflow-hidden rounded-2xl border border-primary/10 bg-background/60 p-5 backdrop-blur">
+                <div className="absolute right-3 top-2 text-4xl font-bold text-primary/10">0{index + 1}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">Kenergy</div>
+                <div className="mt-2 text-lg font-semibold">{title}</div>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">{body}</p>
+              </div>
+              {index < 3 && (
+                <div className="hidden place-items-center px-1 text-primary/70 md:grid">
+                  <MoveRight className="h-5 w-5" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeatureSection({ feature, index, visible }: { feature: Feature; index: number; visible: boolean }) {
+  const Icon = feature.icon;
+
+  return (
+    <section data-autoscene={index + 2} className="relative z-10 grid min-h-screen snap-start place-items-center overflow-hidden px-4 py-16">
+      <div className={`relative grid w-full max-w-6xl gap-8 rounded-[2rem] border border-primary/15 bg-card/60 p-6 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-all duration-700 md:grid-cols-[0.45fr_0.55fr] md:p-10 ${visible ? "translate-y-0 opacity-100 blur-0" : "translate-y-8 opacity-0 blur-md"}`}>
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary backdrop-blur">
+            <Icon className="h-3.5 w-3.5" />
+            {feature.eyebrow}
+          </span>
+          <h3 className="mt-5 max-w-xl text-4xl font-bold tracking-tight md:text-5xl">{feature.title}</h3>
+          <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">{feature.body}</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {feature.points.map((point) => (
+              <span
+                key={point}
+                className="rounded-full border border-primary/15 bg-background/55 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur"
+              >
+                {point}
+              </span>
+            ))}
+          </div>
+        </div>
+        <FeatureVisual icon={Icon} index={index} />
+      </div>
+    </section>
+  );
+}
+
+function FeatureVisual({ icon: Icon, index }: { icon: LucideIcon; index: number }) {
+  const bars = [44, 72, 58, 86, 64];
+  const offset = index % bars.length;
+
+  return (
+    <div className="relative mx-auto grid aspect-square w-full max-w-sm place-items-center">
+      <div className="absolute inset-6 rounded-full border border-primary/15 bg-primary/5 blur-sm" />
+      <div className="absolute inset-12 rounded-full border border-primary/20 bg-background/40 backdrop-blur-xl" />
+      <div className="relative grid h-32 w-32 place-items-center rounded-[2rem] border border-primary/20 bg-background/65 text-primary shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <Icon className="h-12 w-12" />
+      </div>
+      <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-primary/15 bg-background/55 p-3 backdrop-blur-xl">
+        <div className="grid grid-cols-5 items-end gap-2">
+          {bars.map((_, i) => (
+            <div key={i} className="flex h-20 items-end rounded-full bg-primary/10 p-1">
+              <div className="w-full rounded-full bg-primary" style={{ height: `${bars[(i + offset) % bars.length]}%` }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute right-8 top-8 rounded-2xl border border-primary/15 bg-background/60 px-3 py-2 text-xs font-semibold text-primary backdrop-blur-xl">
+        confidence {82 + (index % 4) * 3}%
+      </div>
+    </div>
+  );
+}
+
+function TrustSection() {
+  return (
+    <section className="relative z-10 grid min-h-[45vh] snap-start place-items-center px-4 py-16">
+      <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Private by default
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> Explainable estimates
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Leaf className="h-3.5 w-3.5 text-primary" /> Built for renters
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function FixedGreenBackdrop() {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+      <style>{`
+        @keyframes kenergy-grid-drift {
+          0% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(32px, -22px, 0) scale(1.04); }
+          100% { transform: translate3d(0, 0, 0) scale(1); }
+        }
+      `}</style>
+      <div className="absolute inset-0 opacity-95" style={{ background: "var(--gradient-hero)" }} />
+      <div
+        className="absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            "linear-gradient(color-mix(in oklab, white 45%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, white 45%, transparent) 1px, transparent 1px), radial-gradient(circle, color-mix(in oklab, white 48%, transparent) 1px, transparent 1px)",
+          backgroundSize: "72px 72px",
+          animation: "kenergy-grid-drift 16s ease-in-out infinite",
+        }}
+      />
+      <div className="absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2 rounded-full bg-gradient-to-b from-transparent via-white/20 to-transparent" />
     </div>
   );
 }

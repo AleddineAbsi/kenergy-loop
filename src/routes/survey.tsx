@@ -22,12 +22,12 @@ export const Route = createFileRoute("/survey")({
       {
         name: "description",
         content:
-          "Answer 12 quick questions and unlock a personalized AI Energy Profile plus a smart home kit tailored to your home.",
+          "Answer 6 quick questions and unlock a personalized AI Energy Profile plus a smart home kit tailored to your home.",
       },
       { property: "og:title", content: "60-second Energy Profile — Kenergy" },
       {
         property: "og:description",
-        content: "12 quick questions, personalized AI action plan, custom smart home kit preview.",
+        content: "6 quick questions, personalized AI action plan, custom smart home kit preview.",
       },
     ],
   }),
@@ -81,12 +81,6 @@ const questions: Question[] = [
     options: ["Rent", "Own", "Other"],
   },
   {
-    id: "place_type",
-    q: "What do you want to estimate?",
-    type: "choice",
-    options: ["Room", "Apartment / Wohnung", "House"],
-  },
-  {
     id: "size_m2",
     q: "Approximate size?",
     type: "number",
@@ -100,22 +94,10 @@ const questions: Question[] = [
     placeholder: "1, 2, 3…",
   },
   {
-    id: "building_age",
-    q: "Building year or age?",
-    type: "text",
-    placeholder: "1970s, around 2005, old building, I don't know",
-  },
-  {
     id: "heating",
     q: "Heating type?",
     type: "text",
     placeholder: "gas, district heating, electric, heat pump, radiators but not sure",
-  },
-  {
-    id: "hot_water",
-    q: "Hot water type?",
-    type: "text",
-    placeholder: "central, electric boiler, gas boiler, I don't know",
   },
   {
     id: "issue",
@@ -134,28 +116,6 @@ const questions: Question[] = [
     otherTriggers: ["Other"],
     otherId: "issue_other",
     otherLabel: "Describe your issue",
-  },
-  {
-    id: "devices",
-    q: "Which devices do you use often?",
-    type: "text",
-    placeholder: "gaming PC, laptop, monitors, TV, electric heater, AC, dehumidifier, dryer…",
-  },
-  {
-    id: "spend",
-    q: "Roughly how much do you pay monthly?",
-    type: "dual-number",
-    fields: [
-      { id: "electricity_eur", label: "Electricity", placeholder: "€ / month" },
-      { id: "heating_eur", label: "Heating", placeholder: "€ / month" },
-    ],
-    skippable: true,
-  },
-  {
-    id: "budget",
-    q: "Budget for improvements?",
-    type: "choice",
-    options: ["€0", "Up to €50", "Up to €250", "More than €250"],
   },
 ];
 
@@ -237,6 +197,9 @@ function SurveyPage() {
 
             <section className="mt-10">
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{current.q}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Answer at least 5 of 6 questions to get an instant free estimate.
+              </p>
 
               <div className="mt-6">
                 <QuestionField
@@ -576,7 +539,7 @@ function ResultScreen({
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
         <div className="flex items-start gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
             <Sparkles className="h-5 w-5" />
@@ -593,6 +556,37 @@ function ResultScreen({
             >
               Open the deeper analysis <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+          </div>
+        </div>
+        <div className="relative mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="pointer-events-none select-none blur-[3px]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary">Advanced recommendation preview</div>
+            <h3 className="mt-2 text-lg font-semibold">Install smart radiator thermostats in high-use rooms</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Based on the limited survey data, Kenergy can estimate room-by-room heating controls,
+              required permissions, product cost, and payback once deeper analysis fills the missing assumptions.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-lg bg-background/70 p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Advanced saving potential</div>
+                <div className="mt-0.5 font-semibold">up to €180/year</div>
+              </div>
+              <div className="rounded-lg bg-background/70 p-3">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Compared with free quick wins</div>
+                <div className="mt-0.5 font-semibold">up to +€120/year</div>
+              </div>
+            </div>
+          </div>
+          <div className="absolute inset-0 grid place-items-center rounded-2xl bg-background/70 p-4 backdrop-blur-[2px]">
+            <div className="text-center">
+              <div className="text-sm font-semibold">Unlock paid deeper analysis</div>
+              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                Advanced recommendations use your survey, guessed missing information, and optional bill/photo data to estimate up to larger yearly savings.
+              </p>
+              <Link to="/checkout/deep-analysis" className="mt-3 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
+                Open paid deeper analysis <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>

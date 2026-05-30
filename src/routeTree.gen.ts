@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SurveyRouteImport } from './routes/survey'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScanRouteImport } from './routes/scan'
-import { Route as ReportRouteImport } from './routes/report'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -25,7 +24,6 @@ import { Route as ScanResultRouteImport } from './routes/scan_.result'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as KSlugRouteImport } from './routes/k.$slug'
 import { Route as CheckoutDeepAnalysisRouteImport } from './routes/checkout.deep-analysis'
-import { Route as AdminMonitoringRouteImport } from './routes/admin.monitoring'
 
 const SurveyRoute = SurveyRouteImport.update({
   id: '/survey',
@@ -40,11 +38,6 @@ const SettingsRoute = SettingsRouteImport.update({
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportRoute = ReportRouteImport.update({
-  id: '/report',
-  path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
@@ -107,11 +100,6 @@ const CheckoutDeepAnalysisRoute = CheckoutDeepAnalysisRouteImport.update({
   path: '/checkout/deep-analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminMonitoringRoute = AdminMonitoringRouteImport.update({
-  id: '/admin/monitoring',
-  path: '/admin/monitoring',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,11 +110,9 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
-  '/report': typeof ReportRoute
   '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
-  '/admin/monitoring': typeof AdminMonitoringRoute
   '/checkout/deep-analysis': typeof CheckoutDeepAnalysisRoute
   '/k/$slug': typeof KSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -141,11 +127,9 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
-  '/report': typeof ReportRoute
   '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
-  '/admin/monitoring': typeof AdminMonitoringRoute
   '/checkout/deep-analysis': typeof CheckoutDeepAnalysisRoute
   '/k/$slug': typeof KSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -161,11 +145,9 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/recommendations': typeof RecommendationsRoute
-  '/report': typeof ReportRoute
   '/scan': typeof ScanRoute
   '/settings': typeof SettingsRoute
   '/survey': typeof SurveyRoute
-  '/admin/monitoring': typeof AdminMonitoringRoute
   '/checkout/deep-analysis': typeof CheckoutDeepAnalysisRoute
   '/k/$slug': typeof KSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -182,11 +164,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/profile'
     | '/recommendations'
-    | '/report'
     | '/scan'
     | '/settings'
     | '/survey'
-    | '/admin/monitoring'
     | '/checkout/deep-analysis'
     | '/k/$slug'
     | '/s/$slug'
@@ -201,11 +181,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/profile'
     | '/recommendations'
-    | '/report'
     | '/scan'
     | '/settings'
     | '/survey'
-    | '/admin/monitoring'
     | '/checkout/deep-analysis'
     | '/k/$slug'
     | '/s/$slug'
@@ -220,11 +198,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/profile'
     | '/recommendations'
-    | '/report'
     | '/scan'
     | '/settings'
     | '/survey'
-    | '/admin/monitoring'
     | '/checkout/deep-analysis'
     | '/k/$slug'
     | '/s/$slug'
@@ -240,11 +216,9 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   RecommendationsRoute: typeof RecommendationsRoute
-  ReportRoute: typeof ReportRoute
   ScanRoute: typeof ScanRoute
   SettingsRoute: typeof SettingsRoute
   SurveyRoute: typeof SurveyRoute
-  AdminMonitoringRoute: typeof AdminMonitoringRoute
   CheckoutDeepAnalysisRoute: typeof CheckoutDeepAnalysisRoute
   KSlugRoute: typeof KSlugRoute
   SSlugRoute: typeof SSlugRoute
@@ -272,13 +246,6 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/report': {
-      id: '/report'
-      path: '/report'
-      fullPath: '/report'
-      preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recommendations': {
@@ -365,13 +332,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutDeepAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/monitoring': {
-      id: '/admin/monitoring'
-      path: '/admin/monitoring'
-      fullPath: '/admin/monitoring'
-      preLoaderRoute: typeof AdminMonitoringRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -384,11 +344,9 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   RecommendationsRoute: RecommendationsRoute,
-  ReportRoute: ReportRoute,
   ScanRoute: ScanRoute,
   SettingsRoute: SettingsRoute,
   SurveyRoute: SurveyRoute,
-  AdminMonitoringRoute: AdminMonitoringRoute,
   CheckoutDeepAnalysisRoute: CheckoutDeepAnalysisRoute,
   KSlugRoute: KSlugRoute,
   SSlugRoute: SSlugRoute,

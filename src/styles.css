@@ -62,6 +62,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.75rem;
   --background: oklch(0.99 0.005 140);
   --foreground: oklch(0.22 0.03 160);
@@ -104,38 +105,44 @@
 
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  color-scheme: dark;
+  --background: oklch(0.145 0.025 158);
+  --foreground: oklch(0.965 0.018 145);
+  --card: oklch(0.205 0.028 158);
+  --card-foreground: oklch(0.965 0.018 145);
+  --popover: oklch(0.19 0.03 158);
+  --popover-foreground: oklch(0.965 0.018 145);
+  --primary: oklch(0.74 0.16 152);
+  --primary-foreground: oklch(0.12 0.025 158);
+  --secondary: oklch(0.25 0.035 158);
+  --secondary-foreground: oklch(0.94 0.02 145);
+  --muted: oklch(0.265 0.028 158);
+  --muted-foreground: oklch(0.76 0.035 150);
+  --accent: oklch(0.78 0.14 82);
+  --accent-foreground: oklch(0.16 0.035 85);
+  --destructive: oklch(0.67 0.2 28);
+  --destructive-foreground: oklch(0.98 0.01 20);
+  --border: oklch(0.35 0.035 158);
+  --input: oklch(0.31 0.035 158);
+  --ring: oklch(0.74 0.16 152);
+  --chart-1: oklch(0.74 0.16 152);
+  --chart-2: oklch(0.78 0.14 82);
+  --chart-3: oklch(0.68 0.11 205);
+  --chart-4: oklch(0.72 0.15 42);
+  --chart-5: oklch(0.58 0.11 160);
+  --sidebar: oklch(0.19 0.03 158);
+  --sidebar-foreground: oklch(0.965 0.018 145);
+  --sidebar-primary: oklch(0.74 0.16 152);
+  --sidebar-primary-foreground: oklch(0.12 0.025 158);
+  --sidebar-accent: oklch(0.255 0.035 158);
+  --sidebar-accent-foreground: oklch(0.94 0.02 145);
+  --sidebar-border: oklch(0.35 0.035 158);
+  --sidebar-ring: oklch(0.74 0.16 152);
+
+  --gradient-hero: linear-gradient(135deg, oklch(0.32 0.1 155) 0%, oklch(0.21 0.06 190) 100%);
+  --gradient-card: linear-gradient(180deg, oklch(0.23 0.035 158) 0%, oklch(0.18 0.03 160) 100%);
+  --shadow-soft: 0 16px 34px -18px oklch(0 0 0 / 0.65);
+  --shadow-glow: 0 0 44px -12px oklch(0.74 0.16 152 / 0.45);
 }
 
 @layer base {
@@ -146,5 +153,40 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+
+  button,
+  a,
+  summary {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out;
+  }
+
+  button:not(:disabled):hover,
+  a:hover,
+  summary:hover {
+    transform: translateY(-1px);
+  }
+
+  [class*="rounded-xl"][class*="border"],
+  [class*="rounded-2xl"][class*="border"],
+  [class*="rounded-3xl"][class*="border"] {
+    transition-property: border-color, box-shadow, transform, background-color, opacity;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+  }
+
+  [class*="rounded-xl"][class*="border"]:hover,
+  [class*="rounded-2xl"][class*="border"]:hover,
+  [class*="rounded-3xl"][class*="border"]:hover {
+    border-color: color-mix(in oklch, var(--primary) 32%, var(--border));
+    box-shadow: var(--shadow-soft);
+  }
+
+  [class*="text-primary"][class*="font-bold"],
+  [class*="text-primary"][class*="font-extrabold"],
+  [class*="text-primary"][class*="font-semibold"] {
+    text-wrap: balance;
   }
 }

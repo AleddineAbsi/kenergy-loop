@@ -9,11 +9,11 @@ export const Route = createFileRoute("/s/$slug")({
   head: ({ loaderData }) => {
     const card = loaderData as ShareCard | undefined;
     const title = card
-      ? `${card.display_name ?? "Someone"} is saving €${card.savings_eur}/yr with Kenergy`
-      : "Kenergy savings card";
+      ? `${card.display_name ?? "Someone"} is saving €${card.savings_eur}/yr with Kenergy Loop`
+      : "Kenergy Loop savings card";
     const desc = card
-      ? `${card.savings_eur}€/year · ${card.kwh_saved} kWh · ${card.co2_saved_kg} kg CO₂ avoided. Get your own free AI energy plan in 60 seconds.`
-      : "Get your own free AI energy plan in 60 seconds.";
+      ? `${card.savings_eur}€/year · ${card.kwh_saved} kWh · ${card.co2_saved_kg} kg CO₂ avoided. Get your own free energy-saving plan in 60 seconds.`
+      : "Get your own free energy-saving plan in 60 seconds.";
     return {
       meta: [
         { title },
@@ -68,7 +68,7 @@ function ShareCardPage() {
   async function handleShare() {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "My Kenergy savings", url });
+        await navigator.share({ title: "My Kenergy Loop savings", url });
         return;
       } catch {
         // user cancelled — fall through to copy
@@ -89,7 +89,7 @@ function ShareCardPage() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
             <Zap className="h-4 w-4" />
           </span>
-          Kenergy
+          Kenergy Loop
         </Link>
 
         <div className="w-full overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)]">
@@ -98,7 +98,7 @@ function ShareCardPage() {
             style={{ background: "var(--gradient-hero)" }}
           >
             <div className="text-sm font-medium uppercase tracking-wider text-primary">
-              {card.display_name ?? "A Kenergy user"} just unlocked
+              {card.display_name ?? "A Kenergy Loop user"} just unlocked
             </div>
             <div className="mt-3 flex items-baseline justify-center gap-1">
               <span className="text-7xl font-bold tracking-tight">€{card.savings_eur}</span>
@@ -142,7 +142,7 @@ function ShareCardPage() {
         </div>
 
         <p className="mt-6 max-w-md text-center text-xs text-muted-foreground">
-          Estimates are based on the user's home profile. Get your own personalized AI action plan —
+          Estimates are based on the user's home profile. Get your own personalized Energy-Saving Plan —
           free, no credit card needed.
         </p>
       </main>

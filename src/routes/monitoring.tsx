@@ -46,7 +46,7 @@ import {
 export const Route = createFileRoute("/monitoring")({
   head: () => ({
     meta: [
-      { title: "Consumption dashboard — Kenergy" },
+      { title: "Consumption dashboard — Kenergy Loop" },
       {
         name: "description",
         content:
@@ -283,7 +283,7 @@ function MonitoringPaywall({ cta }: { cta: React.ReactNode }) {
 
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {[
-            { icon: <Zap className="h-4 w-4" />, t: "Live per-appliance draw", d: "Live watts and 24h kWh for every device the AI can identify in your home." },
+            { icon: <Zap className="h-4 w-4" />, t: "Live per-appliance draw", d: "Live watts and 24h kWh for every detected device in your home." },
             { icon: <TrendingDown className="h-4 w-4" />, t: "Weekly trend & alerts", d: "We flag sudden spikes (>20%) and quietly celebrate drops (>10%)." },
             { icon: <AlertTriangle className="h-4 w-4" />, t: "Deprecated detection", d: "Aging fridges, OLED TVs with high standby, idle servers — surfaced automatically." },
             { icon: <Replace className="h-4 w-4" />, t: "Replacement kits", d: "Concrete products + a compatible smart-home kit that streams data right back here." },
@@ -333,6 +333,32 @@ function PreviewStat({ label, value, tone }: { label: string; value: string; ton
     <div className={`rounded-xl border p-4 ${tone === "warn" ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card"}`}>
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function MonitorHeroStat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone?: "warn";
+}) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+        tone === "warn"
+          ? "border-amber-500/40 bg-amber-500/10"
+          : "border-border/70 bg-background/75"
+      }`}
+    >
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1 text-3xl font-black ${tone === "warn" ? "text-amber-700" : "text-primary"}`}>{value}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
     </div>
   );
 }
@@ -432,39 +458,54 @@ function FullDashboard() {
     <div className="min-h-screen">
       <SiteNav />
       <main className="mx-auto max-w-6xl px-4 py-12">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="mb-1 text-xs uppercase tracking-wide text-primary">
-              {access.isAdmin ? "Admin · live monitor (simulated home)" : "Your connected home"}
+        <section className="overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card to-card p-6 shadow-[var(--shadow-soft)]">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                <Zap className="h-3.5 w-3.5" />
+                {access.isAdmin ? "Admin · simulated connected home" : "Your connected home"}
+              </div>
+              <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Live energy monitor</h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                See what is using power right now, which appliance needs attention, and whether your weekly
+                consumption is moving in the right direction.
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Your consumption</h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Live per-appliance draw on top, manual readings &amp; trend below. Deprecated
-              appliances surface a one-click replacement kit.
-            </p>
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <Plus className="h-4 w-4" /> Log reading
+            </button>
           </div>
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)]"
-          >
-            <Plus className="h-4 w-4" /> Log reading
-          </button>
-        </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MonitorHeroStat label="Live total draw" value={`${simLiveW.toLocaleString()} W`} hint="Right now across detected devices" />
+            <MonitorHeroStat label="This week" value={last ? `${Math.round(last.kwh)} kWh` : "—"} hint={weekDeltaPct == null ? "Needs 2 readings to compare" : `${weekDeltaPct >= 0 ? "+" : ""}${weekDeltaPct}% vs last week`} />
+            <MonitorHeroStat label="Monthly estimate" value={monthlyEur != null ? `€${monthlyEur}` : "—"} hint="Latest week × 4.33" />
+            <MonitorHeroStat label="Needs replacement" value={`${deprecated.length} / ${simHome.length}`} hint="Red devices have a suggested swap" tone={deprecated.length ? "warn" : undefined} />
+          </div>
+        </section>
 
         {/* Simulated home block */}
-        <section className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+        <section className="mt-8 rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-all duration-200 hover:border-primary/25 hover:shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Live appliance fleet</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="text-xl font-black tracking-tight">Live appliance fleet</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {access.isAdmin
                   ? "Simulated household used for the admin demo. Mix of healthy, warning, and deprecated devices."
                   : "Devices currently detected in your home."}
               </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">Green: normal</span>
+                <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-medium text-amber-700">Amber: check settings</span>
+                <span className="rounded-full bg-destructive/10 px-2.5 py-1 font-medium text-destructive">Red: replacement suggested</span>
+              </div>
             </div>
             <button
               onClick={() => setShowSim((v) => !v)}
-              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-all hover:-translate-y-0.5 hover:bg-muted"
             >
               {showSim ? "Hide" : "Show"}
             </button>
@@ -477,7 +518,7 @@ function FullDashboard() {
                 <PreviewStat label="Last 24h" value={`${simDailyKwh.toFixed(1)} kWh`} />
                 <PreviewStat label="Need replacement" value={`${deprecated.length} / ${simHome.length}`} tone={deprecated.length ? "warn" : undefined} />
               </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {simHome.map((d) => (
                   <SimDeviceCard key={d.id} d={d} />
                 ))}
@@ -496,20 +537,21 @@ function FullDashboard() {
           />
         )}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <Stat label="This week" value={last ? `${Math.round(last.kwh)} kWh` : "—"} hint={weekDeltaPct == null ? "Log 2+ readings to compare" : `${weekDeltaPct >= 0 ? "+" : ""}${weekDeltaPct}% vs last week${usingSimulatedDashboard ? " · simulated" : ""}`} trendDown={weekDeltaPct != null && weekDeltaPct <= 0} />
-          <Stat label="Monthly est." value={monthlyEur != null ? `€${monthlyEur}` : "—"} hint={monthlyEur != null ? `Based on latest week × 4.33${usingSimulatedDashboard ? " · simulated" : ""}` : "Add cost to readings"} />
+        <div className="hidden">
           <Stat label="CO₂ saved" value={`${co2Saved} kg`} hint={co2Saved > 0 ? "Since first reading" : "Track more to estimate"} />
         </div>
-        {usingSimulatedDashboard && (
-          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
-            Demo mode: weekly trend, alerts, and recent readings use the same simulated household data as the appliance fleet.
-          </div>
-        )}
 
         {/* ── Live charts ──────────────────────────────────────────── */}
-        <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+        <section className="mt-8">
+          <div>
+            <h2 className="text-xl font-black tracking-tight">What changed this week</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Two charts only: appliance load explains where energy goes, weekly trend explains whether the home is improving.
+            </p>
+          </div>
+        </section>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
             <h3 className="text-lg font-semibold">Live draw (last 24h)</h3>
             <p className="text-xs text-muted-foreground">Whole-home power use, sampled hourly.</p>
             <div className="mt-4 h-56">
@@ -534,9 +576,20 @@ function FullDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg">
             <h3 className="text-lg font-semibold">Daily kWh per appliance</h3>
-            <p className="text-xs text-muted-foreground">Red = needs replacement, amber = check settings.</p>
+            <p className="text-xs text-muted-foreground">Each bar is one device's estimated kWh over the last 24h. Longer bar = bigger energy cost.</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" /> Normal range
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-[oklch(0.75_0.15_75)]" /> Check settings
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-[oklch(0.6_0.2_25)]" /> Replace candidate
+              </span>
+            </div>
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={perDeviceKwh} layout="vertical" margin={{ left: 0, right: 8 }}>
@@ -570,7 +623,7 @@ function FullDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] lg:col-span-1">
+          <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] lg:col-span-1">
             <h3 className="text-lg font-semibold">Where energy goes</h3>
             <p className="text-xs text-muted-foreground">Share of total daily kWh by category.</p>
             <div className="mt-4 h-56">
@@ -598,9 +651,9 @@ function FullDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] lg:col-span-1">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg lg:col-span-1">
             <h3 className="text-lg font-semibold">Weekly trend</h3>
-            <p className="text-xs text-muted-foreground">From your logged readings.</p>
+            <p className="text-xs text-muted-foreground">Lower line over time means the plan is working.</p>
             {weeks.length === 0 ? (
               <p className="mt-6 text-sm text-muted-foreground">No readings yet. Log your first one to see your trend appear here.</p>
             ) : (
@@ -624,7 +677,7 @@ function FullDashboard() {
 
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg">
             <h3 className="text-lg font-semibold">Alerts</h3>
             {alerts.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">No alerts yet. We'll flag any sudden jump in consumption.</p>
@@ -643,7 +696,7 @@ function FullDashboard() {
               </ul>
             )}
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg">
             <h3 className="text-lg font-semibold">Recent readings</h3>
             {readings.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">Your last 10 readings will appear here.</p>
@@ -682,18 +735,21 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
   const color = d.status === "healthy" ? "text-emerald-500" : d.status === "warning" ? "text-amber-500" : "text-destructive";
 
   return (
-    <div className={`rounded-xl border bg-card p-5 shadow-[var(--shadow-soft)] ${tone}`}>
+    <div className={`rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${tone}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{d.category}</div>
           <div className="mt-0.5 text-base font-semibold">{d.name}</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            {d.status === "healthy" ? "Operating normally" : d.status === "warning" ? "Needs settings check" : "Replacement candidate"}
+          </div>
         </div>
         <StatusHelp status={d.status} message={statusExplanation(d)} className={color} />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="rounded-md bg-muted p-2"><div className="font-semibold">{d.draw_w.toLocaleString()} W</div><div className="text-muted-foreground">live</div></div>
-        <div className="rounded-md bg-muted p-2"><div className="font-semibold">{d.daily_kwh} kWh</div><div className="text-muted-foreground">24h</div></div>
-        <div className="rounded-md bg-muted p-2"><div className="font-semibold">{d.efficiency}%</div><div className="text-muted-foreground">efficiency</div></div>
+        <div className="rounded-xl bg-muted p-2"><div className="font-semibold">{d.draw_w.toLocaleString()} W</div><div className="text-muted-foreground">live draw</div></div>
+        <div className="rounded-xl bg-muted p-2"><div className="font-semibold">{d.daily_kwh} kWh</div><div className="text-muted-foreground">24h use</div></div>
+        <div className="rounded-xl bg-muted p-2"><div className="font-semibold">{d.efficiency}%</div><div className="text-muted-foreground">efficiency</div></div>
       </div>
       {d.note && <p className="mt-3 text-xs text-muted-foreground">{d.note}</p>}
 
@@ -701,38 +757,59 @@ function SimDeviceCard({ d }: { d: SimDevice }) {
         <>
           <button
             onClick={() => setOpenKit((v) => !v)}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
           >
             <Replace className="h-3 w-3" /> {openKit ? "Hide replacement kit" : "View replacement kit"}
           </button>
           {openKit && (
-            <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-              <div className="text-[10px] uppercase tracking-wide text-primary">Suggested swap</div>
-              <div className="mt-2 flex gap-3">
-                <div className="h-20 w-20 shrink-0">
-                  <ProductImage
-                    name={d.replacement.product}
-                    brand={d.replacement.brand_examples.split(" · ")[0]}
-                    src={d.replacement.image_url}
-                    aspect="aspect-square"
-                    className="h-full"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold">{d.replacement.product}</div>
-                  <div className="text-[11px] text-muted-foreground">{d.replacement.brand_examples}</div>
-                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>€{d.replacement.price_eur}</span>
-                    <span>{d.replacement.saves_kwh_per_year} kWh saved/yr</span>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-[var(--shadow-soft)]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-primary">Suggested swap</div>
+                <span className="rounded-full bg-background px-2.5 py-1 text-[11px] font-bold text-primary">
+                  ~€{Math.round(d.replacement.saves_kwh_per_year * 0.4)}/yr
+                </span>
+              </div>
+              <div className="mt-3 rounded-2xl border border-border bg-background/80 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+                <div className="flex gap-3">
+                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-border bg-card">
+                    <ProductImage
+                      name={d.replacement.product}
+                      brand={d.replacement.brand_examples.split(" · ")[0]}
+                      src={d.replacement.image_url}
+                      aspect="aspect-square"
+                      className="h-full"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold">{d.replacement.product}</div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">{d.replacement.brand_examples}</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11px]">
+                      <div className="rounded-xl bg-muted p-2">
+                        <div className="font-black">€{d.replacement.price_eur}</div>
+                        <div className="text-muted-foreground">estimated price</div>
+                      </div>
+                      <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                        <div className="font-black">{d.replacement.saves_kwh_per_year} kWh</div>
+                        <div className="text-primary/75">saved / year</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <a
+                  href={`https://www.amazon.de/s?k=${encodeURIComponent(d.replacement.product)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  View product options
+                </a>
               </div>
               {d.replacement.kit && d.replacement.kit.length > 0 && (
                 <>
-                  <div className="mt-3 text-[10px] uppercase tracking-wide text-muted-foreground">Compatible kit</div>
-                  <ul className="mt-1 space-y-1.5">
+                  <div className="mt-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Compatible kit</div>
+                  <ul className="mt-2 grid gap-2">
                     {d.replacement.kit.map((k) => (
-                      <li key={k.name} className="flex gap-2 rounded-md bg-background p-2 text-[11px]">
+                      <li key={k.name} className="flex gap-2 rounded-xl border border-border bg-background/85 p-2 text-[11px] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30">
                         <div className="h-12 w-12 shrink-0">
                           <ProductImage name={k.name} src={k.image_url} aspect="aspect-square" className="h-full" />
                         </div>

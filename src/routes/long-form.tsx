@@ -1,19 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, ChevronDown, FileText, Headphones, History, Image as ImageIcon, Loader2, Lock, Mail, MessageSquare, Sparkles, Trash2, Upload, Wand2, Wrench, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, ChevronDown, ExternalLink, FileText, Headphones, HelpCircle, History, Image as ImageIcon, Info, Lightbulb, Loader2, Lock, Mail, MessageSquare, Sparkles, Trash2, Upload, Wand2, Wrench, X } from "lucide-react";
+import { toast } from "sonner";
 import { SiteFooter, SiteNav } from "@/components/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccess } from "@/hooks/use-access";
 import { loadLongFormResponse, saveLongFormResponse } from "@/lib/responses";
 import { deleteLongFormUpload, listLongFormUploads, uploadLongFormFile, type LongFormUpload, type UploadKind } from "@/lib/long-form-uploads";
-import { generateDeepDiagnosis, listMyDiagnoses, type DeepDiagnosisRecord } from "@/lib/deep-diagnosis.functions";
+import {
+  generateDeepDiagnosis,
+  listMyDiagnoses,
+  type DeepDiagnosisRecord,
+  type DeepRecommendedAction,
+  type EcosystemPack,
+  type ProductPick,
+} from "@/lib/deep-diagnosis.functions";
 
 export const Route = createFileRoute("/long-form")({
   head: () => ({
     meta: [
-      { title: "Deep Analysis workspace — Kenergy" },
-      { name: "description", content: "The full Kenergy paid diagnostic workspace: questionnaire, uploads, notes, AI diagnosis, and history." },
+      { title: "Deep Analysis workspace — Kenergy Loop" },
+      { name: "description", content: "The full Kenergy Loop paid diagnostic workspace: questionnaire, uploads, notes, Energy Check, and history." },
     ],
   }),
   component: LongFormPage,
@@ -95,7 +103,7 @@ const sections: Array<{
   {
     id: "habits",
     title: "Habits & goal",
-    description: "How you live shapes the action plan as much as what you own.",
+    description: "How you live shapes the saving plan as much as what you own.",
     fields: [
       { id: "hoursHome", label: "Hours at home per weekday", type: "number", placeholder: "10" },
       { id: "wfh", label: "Days/week working from home", type: "number", placeholder: "3" },
@@ -113,9 +121,9 @@ function LongFormPage() {
 
   if (authLoading || accessLoading) {
     return (
-      <div className="min-h-screen">
+      <div className="flex min-h-screen flex-col">
         <SiteNav />
-        <main className="mx-auto max-w-4xl px-4 py-16 text-sm text-muted-foreground">Loading…</main>
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-16 text-sm text-muted-foreground">Loading…</main>
         <SiteFooter />
       </div>
     );
@@ -148,9 +156,9 @@ function LongFormPage() {
 
 function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <SiteNav />
-      <main className="mx-auto max-w-5xl px-4 py-12">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12">
         <div className="text-center">
           <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
             <Lock className="h-5 w-5" />
@@ -158,7 +166,7 @@ function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
           <div className="mb-2 text-xs uppercase tracking-wide text-primary">Deep Analysis · one-time €19</div>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{title}</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
-            One purchase, one in-depth AI diagnosis tailored to your home — bills, photos, free-text
+            One purchase, one in-depth Energy Check tailored to your home — bills, photos, free-text
             notes, an A–G energy grade, three product tiers (budget · balanced · integrated) and a
             compatible smart-home ecosystem kit. Saved forever, viewable anytime.
           </p>
@@ -173,8 +181,8 @@ function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {[
             { icon: <FileText className="h-4 w-4" />, t: "Detailed questionnaire", d: "Heating, PV, EV, schedules, ages, target reduction + custom notes per section." },
-            { icon: <ImageIcon className="h-4 w-4" />, t: "Bills & appliance photos", d: "Drop your electricity bill and nameplate photos — the AI cross-references them." },
-            { icon: <MessageSquare className="h-4 w-4" />, t: "Free-text notes", d: "Tell the AI about budget, landlord constraints, brands you prefer." },
+            { icon: <ImageIcon className="h-4 w-4" />, t: "Bills & appliance photos", d: "Drop your electricity bill and nameplate photos — Kenergy Loop cross-references them." },
+            { icon: <MessageSquare className="h-4 w-4" />, t: "Additional details", d: "Add budget, landlord constraints, preferred brands, or anything else we should know." },
             { icon: <Wand2 className="h-4 w-4" />, t: "Concrete product picks", d: "Budget · balanced · integrated tiers — real models, real prices." },
             { icon: <Sparkles className="h-4 w-4" />, t: "Ecosystem kit", d: "Matter / Zigbee / Home-Assistant compatible bundle, ready for the dashboard." },
             { icon: <History className="h-4 w-4" />, t: "Forever history", d: "Re-open old diagnoses any time. New runs cost a new credit." },
@@ -188,7 +196,7 @@ function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
 
         <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Sample diagnosis preview</span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Sample Energy Report preview</span>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Example</span>
           </div>
           <div className="relative">
@@ -227,7 +235,7 @@ function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
             </div>
             <div className="absolute inset-0 grid place-items-center">
               <div className="rounded-full border border-border bg-background/90 px-4 py-2 text-xs font-medium text-muted-foreground shadow-[var(--shadow-soft)]">
-                <Lock className="mr-1.5 inline h-3 w-3" /> Unlock to see your real diagnosis
+                <Lock className="mr-1.5 inline h-3 w-3" /> Unlock to see your real Energy Report
               </div>
             </div>
           </div>
@@ -241,34 +249,43 @@ function PaywallShell({ title, cta }: { title: string; cta: React.ReactNode }) {
 function Workspace() {
   const [tab, setTab] = useState<TabId>("form");
 
-  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: "form", label: "Questionnaire", icon: <FileText className="h-3.5 w-3.5" /> },
-    { id: "uploads", label: "Bills & photos", icon: <ImageIcon className="h-3.5 w-3.5" /> },
-    { id: "notes", label: "Notes to AI", icon: <MessageSquare className="h-3.5 w-3.5" /> },
-    { id: "diagnosis", label: "AI diagnosis", icon: <Wand2 className="h-3.5 w-3.5" /> },
-    { id: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
+  const tabs: { id: TabId; label: string; description: string; icon: React.ReactNode }[] = [
+    { id: "form", label: "Questionnaire", description: "Home, heating, habits", icon: <FileText className="h-4 w-4" /> },
+    { id: "uploads", label: "Bills & photos", description: "Proof for sharper numbers", icon: <ImageIcon className="h-4 w-4" /> },
+    { id: "notes", label: "additional details", description: "Budget, constraints, goals", icon: <MessageSquare className="h-4 w-4" /> },
+    { id: "diagnosis", label: "Energy Check", description: "Ranked paid saving plan", icon: <Wand2 className="h-4 w-4" /> },
+    { id: "history", label: "History", description: "Saved previous runs", icon: <History className="h-4 w-4" /> },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <SiteNav />
-      <main className="mx-auto max-w-4xl px-4 py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
         <div className="mb-2 text-xs uppercase tracking-wide text-primary">Deep Analysis workspace</div>
         <h1 className="text-3xl font-bold tracking-tight">Your in-depth energy profile</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Fill in what you can, drop in bills or appliance photos, add any extra context, then let the AI write a tailored plan with concrete product picks.
+          Fill in what you can, drop in bills or appliance photos, add any extra context, then let Kenergy Loop build a tailored plan with concrete product picks.
         </p>
 
-        <div className="mt-6 flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1 text-xs">
+        <div className="mt-6 grid gap-2 rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-card to-card p-2 shadow-[var(--shadow-soft)] sm:grid-cols-2 lg:grid-cols-5">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${
-                tab === t.id ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
+              className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                tab === t.id
+                  ? "border-primary/40 bg-background text-foreground shadow-[var(--shadow-glow)]"
+                  : "border-border/70 bg-background/55 text-muted-foreground hover:border-primary/25 hover:bg-background/85 hover:text-foreground"
               }`}
             >
-              {t.icon} {t.label}
+              <span className="absolute inset-x-3 top-0 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-x-100" />
+              <span className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+                tab === t.id ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+              }`}>
+                {t.icon}
+              </span>
+              <span className="mt-3 block text-sm font-bold">{t.label}</span>
+              <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{t.description}</span>
             </button>
           ))}
         </div>
@@ -374,7 +391,7 @@ function Questionnaire() {
                     <textarea
                       rows={2}
                       maxLength={600}
-                      placeholder="Anything that doesn't fit the fields above — the AI reads this verbatim."
+                      placeholder="Anything that doesn't fit the fields above — Kenergy Loop uses this as extra context."
                       value={(state[`${section.id}_custom`] as string) ?? ""}
                       onChange={(e) => update(`${section.id}_custom`, e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -496,7 +513,7 @@ function UploadsTab() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        Drop a recent electricity bill (PDF or photo) and snap any appliance nameplate you'd like the AI to consider. Files are private to your account.
+        Drop a recent electricity bill (PDF or photo) and snap any appliance nameplate you'd like Kenergy Loop to consider. Files are private to your account.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -601,7 +618,7 @@ function NotesTab() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Anything that doesn't fit a form field — preferred brands, constraints, what you've already tried, budget, landlord situation, etc. The AI reads this verbatim.
+        Anything that doesn't fit a form field — preferred brands, constraints, what you've already tried, budget, landlord situation, etc. Kenergy Loop uses this as extra context.
       </p>
       <textarea
         value={notes}
@@ -675,7 +692,7 @@ function DiagnosisTab() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold">Run a new diagnosis</h3>
+            <h3 className="text-base font-semibold">Run a new Energy Check</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Costs 1 credit. Uses every field, upload and note you've entered. Results are saved forever — old ones don't re-spend credits to view.
             </p>
@@ -690,7 +707,7 @@ function DiagnosisTab() {
           className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-          {busy ? "Generating…" : "Generate diagnosis"}
+          {busy ? "Generating…" : "Generate Energy Check"}
         </button>
         {outOfCredits && (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -698,7 +715,7 @@ function DiagnosisTab() {
             <Link to="/checkout/deep-analysis" className="font-semibold text-primary hover:underline">
               Top up
             </Link>{" "}
-            to run another diagnosis.
+            to run another Energy Check.
           </p>
         )}
         {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
@@ -714,8 +731,8 @@ function DiagnosisTab() {
               <div>
                 <h3 className="text-base font-semibold">Use one Deep Analysis credit?</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Generating a new diagnosis will spend <strong>1 of your purchased analyses</strong> and cannot be undone.
-                  Your existing diagnosis stays in <em>History</em> either way.
+                  Generating a new Energy Check will spend <strong>1 of your purchased analyses</strong> and cannot be undone.
+                  Your existing Energy Check stays in <em>History</em> either way.
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   You have <strong>{access.diagnosisCredits}</strong> credit{access.diagnosisCredits === 1 ? "" : "s"} left after this run: <strong>{Math.max(0, access.diagnosisCredits - 1)}</strong>.
@@ -745,7 +762,7 @@ function DiagnosisTab() {
       ) : latest ? (
         <DiagnosisView record={latest} />
       ) : (
-        <p className="text-sm text-muted-foreground">No diagnosis yet — fill the form, then click generate.</p>
+        <p className="text-sm text-muted-foreground">No Energy Check yet — fill the form, then click generate.</p>
       )}
     </div>
   );
@@ -758,222 +775,310 @@ function DiagnosisView({ record }: { record: DeepDiagnosisRecord }) {
   const [landlordEmail, setLandlordEmail] = useState("");
   const [supportTarget, setSupportTarget] = useState<string | null>(null);
   const [docsTarget, setDocsTarget] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | DeepActionFilter>("all");
+  const actionPlanCards = buildDeepRecommendedActions(p);
+  const visibleActionCards = actionPlanCards.filter((action) => filter === "all" || deepFilterFor(action) === filter);
+  const ecosystemPacks = buildEcosystemPacks(p, actionPlanCards);
   const mainIntervention =
-    p.ecosystem_kit?.items?.[0]?.name ??
-    p.product_picks?.[0]?.name ??
+    actionPlanCards.find((x) => x.requires_technician || x.requires_landlord)?.title ??
+    actionPlanCards.find((x) => x.product)?.product?.name ??
     "radiator controls and heating schedule optimization";
   const landlordPreview = `Subject: Request to approve a small energy-saving improvement
 
 Hello,
 
-I used Kenergy to review my home energy profile and it identified a practical intervention that could reduce consumption without changing the building structure.
+I used Kenergy Loop to review my home energy profile and it identified a practical intervention that could reduce consumption without changing the building structure.
 
 Technical summary:
 - Recommended intervention: ${mainIntervention}
 - Estimated annual saving potential: about €${Math.round(p.yearly_savings_eur)} and ${Math.round(p.yearly_kwh)} kWh
-- Current diagnosis grade: ${p.grade} (score ${p.energy_score})
+- Current Energy Check grade: ${p.grade} (score ${p.energy_score})
 - Data quality: ${p.data_quality}
 - Work requested: permission for a technician to inspect compatibility and, if suitable, install or adjust the relevant control hardware.
 
-This should be treated as a low-impact efficiency measure. No structural work is requested at this stage. I can share the full Kenergy report and any documents needed before booking a technician.
+This should be treated as a low-impact efficiency measure. No structural work is requested at this stage. I can share the full Kenergy Loop report and any documents needed before booking a technician.
 
 Could you confirm whether this is allowed and whether you have a preferred technician or process?
 
 Best regards,`;
-  const actionPlanCards = buildDeepActionCards(p);
+
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Diagnosis · {new Date(record.created_at).toLocaleDateString()}</div>
-            <h3 className="mt-1 text-xl font-bold">{p.summary}</h3>
-            <p className="mt-2 text-xs text-muted-foreground">{p.goal_alignment}</p>
+      <div className="overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card to-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Energy Check · {new Date(record.created_at).toLocaleDateString()}
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-primary">{p.grade}</div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Energy score {p.energy_score}</div>
-          </div>
+          <h3 className="mt-3 text-2xl font-black tracking-tight">{p.summary}</h3>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{p.goal_alignment}</p>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <Mini label="Saved/yr" value={`€${Math.round(p.yearly_savings_eur)}`} />
-          <Mini label="kWh/yr" value={`${Math.round(p.yearly_kwh)}`} />
-          <Mini label="Data" value={p.data_quality} />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Potential yearly saving"
+            value={`€${Math.round(p.yearly_savings_eur)}`}
+            help="Estimated yearly euro upside from the full ranked plan. It is a planning estimate, not a guaranteed bill reduction."
+            tone="money"
+          />
+          <MetricCard
+            label="Energy cut"
+            value={`${Math.round(p.yearly_kwh)} kWh`}
+            help="Estimated yearly energy reduction if the ranked actions are followed. It is not a meter reading; bills and readings improve it."
+            tone="energy"
+          />
+          <MetricCard
+            label="Grade"
+            value={p.grade}
+            help="A quick A-G summary of how efficient the current profile appears. A is best, G is worst, and it is based on the available profile data."
+            tone="grade"
+          />
+          <MetricCard
+            label="Data quality"
+            value={p.data_quality}
+            help="How much evidence Kenergy Loop had. Low/medium means some assumptions remain; bills, meter readings, appliance labels, and photos improve confidence."
+            tone="quality"
+          />
         </div>
       </div>
 
-      <Section title="Actionable implementation steps">
-        <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <Section title="Recommended Energy-Saving Plan">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-sm transition-all duration-300 hover:border-primary/35 hover:shadow-md">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h4 className="font-semibold">Prioritized AI action plan</h4>
+              <h4 className="font-semibold">Sorted from easiest money to deeper interventions</h4>
               <p className="mt-1 text-xs text-muted-foreground">
-                Sorted like the quick survey: low-friction steps first, then actions that need a product, landlord approval, or a technician.
+                Same structure as the quick survey, but with more actions, product picks, approval steps, technician steps, and confidence notes.
               </p>
             </div>
-            <span className="rounded-full bg-background px-3 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-full bg-background px-4 py-2 text-sm font-bold text-primary shadow-sm">
               up to €{Math.round(p.yearly_savings_eur)}/year
             </span>
           </div>
-          <ul className="mt-4 grid gap-3 md:grid-cols-3">
-            {actionPlanCards.map((action, i) => (
-              <li key={`${action.title}-${i}`} className="rounded-xl border border-border bg-background p-4">
+          <div className="mt-5 flex flex-wrap gap-2">
+            {deepFilters.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setFilter(item.key)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 ${
+                  filter === item.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Sorted from easiest to most involved. Confidence reflects how well your survey, uploads, notes, and deep profile support the suggestion.
+          </p>
+          <ul className="mt-6 grid gap-4 md:grid-cols-2">
+            {visibleActionCards.map((action, i) => (
+              <li key={action.id} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                    ~€{action.savings}/yr
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-black text-primary-foreground">
+                        {i + 1}
+                      </span>
+                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                        {categoryLabel(action.category)}
+                      </span>
+                    </div>
+                    <h5 className="mt-3 text-lg font-semibold">{action.title}</h5>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    {action.effort}
                   </span>
                 </div>
-                <h5 className="mt-3 text-sm font-semibold">{action.title}</h5>
-                <p className="mt-1 text-xs text-muted-foreground">{action.why}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                  <span className="rounded-full bg-muted px-2 py-0.5">{action.friction}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5">{action.owner}</span>
+                <p className="mt-2 text-sm text-muted-foreground">{action.why}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                  {action.requires_landlord && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-700">Landlord approval</span>}
+                  {action.requires_technician && <span className="rounded-full bg-sky-500/10 px-2.5 py-1 font-semibold text-sky-700">Technician</span>}
+                  {action.product?.sponsored && <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">Sponsored product suggestion</span>}
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-base font-extrabold text-primary">
+                    {action.savings_eur_per_year > 0
+                      ? `~€${Math.round(action.savings_eur_per_year)}/yr`
+                      : "Savings need better data"}
+                  </span>
+                  <span className="relative flex items-center gap-1 text-xs text-muted-foreground">
+                    <HelpCircle tabIndex={0} className="peer h-3 w-3 cursor-help outline-none" />
+                    Confidence {Math.round(action.confidence)}%
+                    <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-64 rounded-xl border border-border bg-popover p-3 text-left text-[11px] leading-relaxed text-popover-foreground opacity-0 shadow-[var(--shadow-soft)] transition-opacity peer-hover:opacity-100 peer-focus:opacity-100">
+                      Confidence means how strongly this recommendation is supported by your current answers. Lower confidence usually means Kenergy Loop had to assume missing information; bills, meter readings, or photos make it sharper.
+                    </span>
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-all duration-700 ease-out" style={{ width: `${Math.max(0, Math.min(100, action.confidence))}%` }} />
+                </div>
+
+                <div className="mt-4 space-y-2 text-xs">
+                  <details className="group rounded-lg border border-border bg-background/40 p-3">
+                    <summary className="flex cursor-pointer items-center gap-1.5 text-foreground">
+                      <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                      <span className="font-medium">How it saves energy</span>
+                    </summary>
+                    <p className="mt-2 text-muted-foreground">{action.how_it_works}</p>
+                  </details>
+
+                  <details className="group rounded-lg border border-border bg-background/40 p-3">
+                    <summary className="flex cursor-pointer items-center gap-1.5 text-foreground">
+                      <Wrench className="h-3.5 w-3.5 text-primary" />
+                      <span className="font-medium">How to proceed</span>
+                    </summary>
+                    <p className="mt-2 whitespace-pre-line text-muted-foreground">{action.how_to_proceed}</p>
+                  </details>
+
+                  <details className="group rounded-lg border border-border bg-background/40 p-3">
+                    <summary className="flex cursor-pointer items-center gap-1.5 text-foreground">
+                      <Info className="h-3.5 w-3.5 text-primary" />
+                      <span className="font-medium">Why this applies to you</span>
+                    </summary>
+                    <p className="mt-2 text-muted-foreground">{action.why}</p>
+                  </details>
+
+                  {action.sources && action.sources.length > 0 && (
+                    <div className="rounded-lg border border-dashed border-border bg-background/30 p-3">
+                      <div className="text-[11px] font-medium text-foreground">Sources</div>
+                      <ul className="mt-1 space-y-0.5">
+                        {action.sources.map((source, sourceIndex) => (
+                          <li key={`${action.id}-source-${sourceIndex}`}>
+                            {source.url ? (
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary"
+                              >
+                                {source.label} <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">{source.label}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {action.product && (
+                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-primary">Product recommendation</div>
+                        <div className="font-semibold">{action.product.name}</div>
+                        <p className="mt-1 text-xs text-muted-foreground">{action.product.why}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                          <span className="rounded-full bg-background px-2 py-0.5">{action.product.brand_examples}</span>
+                          <span className="rounded-full bg-background px-2 py-0.5">{action.product.api_capability}</span>
+                          {action.product.dashboard_ready && <span className="rounded-full bg-background px-2 py-0.5 text-primary">Dashboard-ready</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-row items-center justify-between gap-2 sm:flex-col sm:items-end">
+                        <div className="rounded-xl bg-background px-3 py-2 text-center shadow-sm">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Price</div>
+                          <div className="text-lg font-black text-primary">€{Math.round(action.product.price_eur)}</div>
+                        </div>
+                        <a href={productUrl(action.product)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md bg-background px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-all hover:-translate-y-0.5 hover:bg-primary/10">
+                          Open product <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setSupportTarget(action.product?.name ?? action.title)} className="inline-flex items-center gap-1.5 rounded-md bg-background px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10">
+                        <Headphones className="h-3 w-3" />
+                        Technical team
+                      </button>
+                      <button type="button" onClick={() => setDocsTarget(action.product?.name ?? action.title)} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5">
+                        <BookOpen className="h-3 w-3" />
+                        Product docs
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                  {action.requires_landlord && (
+                    <button type="button" onClick={() => setLandlordOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15">
+                      <Mail className="h-3.5 w-3.5" />
+                      Preview approval email
+                    </button>
+                  )}
+                  {action.requires_technician && (
+                    <button type="button" onClick={() => setTechnicianOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-500/15">
+                      <Wrench className="h-3.5 w-3.5" />
+                      Choose technician
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         </div>
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <ActionStepCard
-            icon={<Mail className="h-4 w-4" />}
-            title="Ask for approval"
-            text="For rental homes, Kenergy prepares a landlord-ready message with the estimated savings, intervention type, and technical context."
-            action="Preview landlord email"
-            onClick={() => setLandlordOpen(true)}
-          />
-          <ActionStepCard
-            icon={<Wrench className="h-4 w-4" />}
-            title="Choose a technician"
-            text="Book a compatible heating or smart-home technician for inspection, installation, or radiator control setup."
-            action="Choose technician"
-            onClick={() => setTechnicianOpen(true)}
-          />
-          <ActionStepCard
-            icon={<FileText className="h-4 w-4" />}
-            title="Prepare documents"
-            text="Collect recent bills, room photos, meter readings, heating type, and landlord contact details so the recommendation can be verified."
-          />
-        </div>
       </Section>
 
-      <Section title="Concrete product picks">
-        {p.product_picks?.length ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            {(["budget", "balanced", "integrated"] as const).map((tier) => {
-              const list = p.product_picks.filter((x) => x.tier === tier);
-              if (!list.length) return null;
-              return (
-                <div key={tier} className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{tier}</div>
-                  <ul className="mt-2 space-y-3">
-                    {list.map((x) => (
-                      <li key={x.id} className="rounded-md border border-border/60 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold">{x.name}</span>
-                          <span className="text-xs">€{x.price_eur}</span>
-                        </div>
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{x.category} · {x.brand_examples}</div>
-                        <p className="mt-1 text-xs text-muted-foreground">{x.why}</p>
-                        <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
-                          <span className="rounded-full bg-muted px-2 py-0.5">{x.api_capability}</span>
-                          {x.dashboard_ready && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Dashboard-ready</span>}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+      {ecosystemPacks.length > 0 && (
+        <Section title="Sponsored product packs">
+          <div className="grid gap-3 lg:grid-cols-2">
+            {ecosystemPacks.map((pack) => (
+              <div key={pack.id} className="rounded-2xl border border-primary/25 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-primary">Pack solves actions {pack.solves_action_ids.join(", ")}</div>
+                    <h4 className="mt-1 font-bold">{pack.name}</h4>
+                    <p className="mt-1 text-xs text-muted-foreground">{pack.description}</p>
+                  </div>
+                  <div className="rounded-xl bg-primary/10 px-4 py-3 text-right">
+                    <div className="text-2xl font-black text-primary">€{Math.round(pack.yearly_savings_eur)}</div>
+                    <div className="text-[11px] text-muted-foreground">up to / year</div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No product picks for this profile.</p>
-        )}
-      </Section>
-
-      {p.ecosystem_kit && (
-        <Section title="Compatible ecosystem kit">
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h4 className="font-semibold">{p.ecosystem_kit.name}</h4>
-                <p className="mt-1 text-xs text-muted-foreground">{p.ecosystem_kit.description}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full bg-muted px-2.5 py-1 font-semibold">Bundle price ~€{Math.round(pack.total_eur)}</span>
+                  {pack.vendor_url && (
+                    <a href={pack.vendor_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 font-semibold text-primary hover:bg-primary/5">
+                      Open vendor search <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+                <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {pack.items.map((item) => (
+                    <li key={`${pack.id}-${item.id}`} className="rounded-xl border border-border/70 bg-background p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-semibold">{item.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{item.brand_examples}</div>
+                        </div>
+                        <span className="text-xs font-bold text-primary">€{Math.round(item.price_eur)}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.why}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <a href={productUrl(item)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/15">
+                          Product link <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <button type="button" onClick={() => setSupportTarget(item.name)} className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold hover:border-primary/30 hover:bg-primary/5">
+                          <Headphones className="h-3 w-3" />
+                          Tech team
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <span className="rounded-full bg-background px-3 py-1 text-sm font-semibold">€{p.ecosystem_kit.total_eur}</span>
-            </div>
-            <p className="mt-1 text-[11px] text-muted-foreground"><strong>Hub:</strong> {p.ecosystem_kit.hub} · {p.ecosystem_kit.interoperability}</p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setSupportTarget(`${p.ecosystem_kit.name} technical team`)}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-primary/30 bg-background px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
-              >
-                <Headphones className="h-3.5 w-3.5" />
-                Contact kit technical team
-              </button>
-              <button
-                type="button"
-                onClick={() => setDocsTarget(`${p.ecosystem_kit.name} installation kit`)}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5"
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                Open kit documentation
-              </button>
-            </div>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {p.ecosystem_kit.items.map((x) => (
-                <li key={x.id} className="rounded-md bg-background p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{x.name}</span>
-                    <span className="text-xs">€{x.price_eur}</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">{x.brand_examples}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">{x.why}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSupportTarget(x.name)}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
-                    >
-                      <Headphones className="h-3 w-3" />
-                      Technical team
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDocsTarget(x.name)}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5"
-                    >
-                      <BookOpen className="h-3 w-3" />
-                      Product docs
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Section>
-      )}
-
-      {p.next_steps?.length > 0 && (
-        <Section title="Next steps">
-          <ol className="space-y-2">
-            {p.next_steps.map((s, i) => (
-              <li key={i} className="flex gap-3 rounded-md border border-border p-3 text-sm">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">{i + 1}</span>
-                <span>{s}</span>
-              </li>
             ))}
-          </ol>
+          </div>
         </Section>
       )}
 
       {technicianOpen && (
         <Modal title="Choose technicians" onClose={() => setTechnicianOpen(false)}>
           <p className="text-sm text-muted-foreground">
-            Demo preview: Kenergy would match the action plan with local technicians who can inspect compatibility and complete the installation.
+            Demo preview: Kenergy Loop would match the saving plan with local technicians who can inspect compatibility and complete the installation.
           </p>
           <div className="mt-4 space-y-3">
             {[
@@ -1015,7 +1120,7 @@ Best regards,`;
             <pre className="whitespace-pre-wrap text-xs leading-relaxed text-foreground">{landlordPreview}</pre>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Demo only: this preview shows how Kenergy would prepare the message. No email is sent from this page.
+            Demo only: this preview shows how Kenergy Loop would prepare the message. No email is sent from this page.
           </p>
         </Modal>
       )}
@@ -1023,7 +1128,7 @@ Best regards,`;
       {supportTarget && (
         <Modal title="Technical team contact" onClose={() => setSupportTarget(null)}>
           <p className="text-sm text-muted-foreground">
-            Demo preview: Kenergy would route this request to the product or kit technical team with your diagnosis attached.
+            Demo preview: Kenergy Loop would route this request to the product or kit technical team with your Energy Report attached.
           </p>
           <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Selected item</div>
@@ -1038,7 +1143,7 @@ Best regards,`;
               <div className="rounded-lg bg-background p-3">
                 <div className="font-medium">Attached context</div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Home type, heating system, diagnosis grade, estimated savings, and selected kit components.
+                  Home type, heating system, Energy Check grade, estimated savings, and selected kit components.
                 </p>
               </div>
             </div>
@@ -1065,7 +1170,7 @@ Best regards,`;
       {docsTarget && (
         <Modal title="Technical documentation" onClose={() => setDocsTarget(null)}>
           <p className="text-sm text-muted-foreground">
-            Demo preview: Kenergy would collect the official setup guide, compatibility notes, API capability, and maintenance documents for this product.
+            Demo preview: Kenergy Loop would collect the official setup guide, compatibility notes, API capability, and maintenance documents for this product.
           </p>
           <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Documentation bundle</div>
@@ -1149,39 +1254,296 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
   );
 }
 
-function buildDeepActionCards(plan: DeepDiagnosisRecord["plan"]) {
-  const total = Math.max(45, Math.round(plan.yearly_savings_eur || 0));
-  const firstProduct = plan.product_picks?.[0];
-  const dashboardProduct = plan.product_picks?.find((x) => x.dashboard_ready) ?? firstProduct;
-  const firstStep = plan.next_steps?.[0];
+function buildDeepRecommendedActions(plan: DeepDiagnosisRecord["plan"]): DeepRecommendedAction[] {
+  const total = Math.max(120, Math.round(plan.yearly_savings_eur || 0));
+  const provided = (plan.recommended_actions ?? []).map((action, index) => ({
+    ...action,
+    id: action.id || `ai-${index + 1}`,
+    confidence: Math.max(0, Math.min(100, Number(action.confidence ?? 55))),
+    savings_eur_per_year: Math.max(8, Number(action.savings_eur_per_year ?? Math.round(total / 8))),
+    sources: externalSources(action.sources),
+  }));
 
-  return [
+  const fallbackProducts = plan.product_picks ?? [];
+  const productActions: DeepRecommendedAction[] = fallbackProducts.slice(0, 4).map((product, index) => ({
+    id: `product-${product.id || index + 1}`,
+    title: `Install ${product.name}`,
+    category: "product",
+    effort: product.dashboard_ready ? "medium" : "easy",
+    savings_eur_per_year: Math.max(22, Math.round(total * (0.12 + index * 0.03))),
+    confidence: product.dashboard_ready ? 62 : 55,
+    why: product.why,
+    how_it_works: `${product.name} helps reduce waste or reveal consumption patterns so the highest-load device can be controlled instead of guessed.`,
+    how_to_proceed: `Compare ${product.brand_examples}, check compatibility, then use the technical team and product docs buttons before buying.`,
+    requires_landlord: false,
+    requires_technician: false,
+    product,
+    sources: defaultSourcesFor(product.category),
+  }));
+
+  const firstStep = plan.next_steps?.[0];
+  const actions = [
+    ...provided,
+    ...(provided.length ? [] : [
+      {
+        id: "do-now-1",
+        title: firstStep ?? "Tune heating schedule and radiator controls",
+        category: "do_now" as const,
+        effort: "easy" as const,
+        savings_eur_per_year: Math.max(25, Math.round(total * 0.16)),
+        confidence: 70,
+        why: "This starts with the lowest-friction setting change before buying hardware, so the user gets a clean before/after baseline.",
+        how_it_works: "Lower setpoints, better timing, and fewer overheated hours reduce heating demand without changing the building.",
+        how_to_proceed: "Set a 7-day schedule, keep rooms around the target comfort level, and compare the next meter reading.",
+        requires_landlord: false,
+        requires_technician: false,
+        sources: defaultSourcesFor("heating"),
+      },
+      ...productActions,
+    ]),
+  ];
+
+  if (!actions.some((x) => x.requires_landlord || x.category === "needs_landlord")) {
+    actions.push({
+      id: "landlord-demo",
+      title: "Ask the landlord to approve radiator control or window sealing work",
+      category: "needs_landlord",
+      effort: "medium",
+      savings_eur_per_year: Math.max(45, Math.round(total * 0.22)),
+      confidence: 48,
+      why: "Assumption: the user rents or shares responsibility for fixed heating/window elements. This is included so the pitch shows the approval workflow.",
+      how_it_works: "Approval unlocks small building-side fixes that reduce heat loss or improve heat control without a full renovation.",
+      how_to_proceed: "Use the email preview, attach the Kenergy Loop estimate, and ask whether the landlord has a preferred technician or process.",
+      requires_landlord: true,
+      requires_technician: false,
+      sources: defaultSourcesFor("renter"),
+    });
+  }
+
+  if (!actions.some((x) => x.requires_technician || x.category === "needs_technician")) {
+    actions.push({
+      id: "technician-demo",
+      title: "Book a technician for heating balancing and control compatibility",
+      category: "needs_technician",
+      effort: "hard",
+      savings_eur_per_year: Math.max(65, Math.round(total * 0.28)),
+      confidence: 44,
+      why: "Assumption: the heating system may have unbalanced radiators or older controls. This pitch action shows Kenergy Loop's technician matching flow.",
+      how_it_works: "Hydraulic balancing and compatible controls can reduce overheating and distribution losses across the home.",
+      how_to_proceed: "Open Choose technician, select a demo provider, and prepare heating type, photos, and recent bills for the visit.",
+      requires_landlord: true,
+      requires_technician: true,
+      sources: defaultSourcesFor("heating balancing"),
+    });
+  }
+
+  if (!actions.some((x) => x.category === "monitor")) {
+    actions.push({
+      id: "monitor-demo",
+      title: "Track the biggest load for two weeks",
+      category: "monitor",
+      effort: "easy",
+      savings_eur_per_year: Math.max(24, Math.round(total * 0.1)),
+      confidence: 58,
+      why: "Monitoring turns the Energy Check into proof: it shows whether behavior, product, or technician actions actually changed consumption.",
+      how_it_works: "Repeated readings reveal baseline loads, spikes, and devices that keep drawing energy when not expected.",
+      how_to_proceed: "Add two meter readings or use a dashboard-ready smart plug for the suspected high-load appliance.",
+      requires_landlord: false,
+      requires_technician: false,
+      sources: defaultSourcesFor("monitoring"),
+    });
+  }
+
+  if (!actions.some((x) => x.category === "add_info")) {
+    actions.push({
+      id: "add-info-demo",
+      title: "Add one missing datapoint to sharpen the estimate",
+      category: "add_info",
+      effort: "easy",
+      savings_eur_per_year: 0,
+      confidence: 100,
+      why: "The current Energy Check can rank actions, but one concrete datapoint would make the savings numbers more reliable.",
+      how_it_works: "Bills, meter readings, tariff prices, appliance nameplates, and landlord constraints reduce assumptions in the estimation model.",
+      how_to_proceed: "Add the most useful missing number before the next Energy Check so Kenergy Loop can sharpen the estimate.",
+      requires_landlord: false,
+      requires_technician: false,
+      sources: defaultSourcesFor("monitoring"),
+    });
+  }
+
+  return actions
+    .filter((action) => action.title && action.why)
+    .sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || b.savings_eur_per_year - a.savings_eur_per_year)
+    .slice(0, 12);
+}
+
+function buildEcosystemPacks(plan: DeepDiagnosisRecord["plan"], actions: DeepRecommendedAction[]): EcosystemPack[] {
+  const provided = plan.ecosystem_packs ?? [];
+  if (provided.length >= 2) {
+    return provided.map((pack, index) => ({
+      ...pack,
+      yearly_savings_eur: Math.max(Math.round((plan.yearly_savings_eur || 180) * (index === 0 ? 0.75 : 0.55)), pack.yearly_savings_eur),
+    }));
+  }
+
+  const productActions = actions.filter((action) => action.product);
+  const products = productActions.map((action) => action.product!).filter(Boolean);
+  const fallbackProducts: ProductPick[] = [
     {
-      title: firstStep ?? "Tune heating schedule and radiator controls",
-      why:
-        "Start with the lowest-friction behavior or setting change before buying hardware. It gives a clean before/after baseline for the rest of the plan.",
-      savings: Math.max(8, Math.round(total * 0.18)),
-      friction: "Do it yourself",
-      owner: "No approval first",
+      id: "fallback-smart-plug",
+      category: "monitoring plug",
+      tier: "budget",
+      name: "Matter energy-monitoring smart plug",
+      brand_examples: "Eve Energy, TP-Link Tapo, Shelly Plug",
+      price_eur: 28,
+      why: "Tracks standby and appliance consumption so Kenergy Loop can prove which device actually changed.",
+      api_capability: "Matter / Local API",
+      dashboard_ready: true,
+      sponsored: true,
     },
     {
-      title: dashboardProduct ? `Install ${dashboardProduct.name}` : "Install the first monitoring-ready device",
-      why: dashboardProduct
-        ? dashboardProduct.why
-        : "A monitoring-ready device helps prove what changed and makes future recommendations more accurate.",
-      savings: Math.max(18, Math.round(total * 0.38)),
-      friction: "Small product",
-      owner: dashboardProduct?.dashboard_ready ? "Dashboard-ready" : "Optional monitoring",
+      id: "fallback-thermostat",
+      category: "radiator thermostat",
+      tier: "balanced",
+      name: "Smart radiator thermostat starter set",
+      brand_examples: "tado, Bosch Smart Home, Homematic IP",
+      price_eur: 110,
+      why: "Improves heating schedules room by room and supports savings verification during the heating season.",
+      api_capability: "Matter / Cloud API / Zigbee",
+      dashboard_ready: true,
+      sponsored: true,
     },
     {
-      title: "Get approval or a technician for the higher-impact work",
-      why:
-        "If the plan touches radiator valves, heating balancing, wiring, or permanent installation, Kenergy prepares the landlord message and technician context.",
-      savings: Math.max(24, Math.round(total * 0.44)),
-      friction: "Needs coordination",
-      owner: "Landlord / technician",
+      id: "fallback-humidity",
+      category: "comfort sensor",
+      tier: "budget",
+      name: "Temperature and humidity sensor",
+      brand_examples: "Aqara, SwitchBot, Shelly BLU",
+      price_eur: 24,
+      why: "Adds indoor comfort context so heating cuts do not create mold or comfort problems.",
+      api_capability: "Zigbee / Bluetooth / Matter",
+      dashboard_ready: true,
     },
   ];
+  const usableProducts = [...products, ...fallbackProducts].slice(0, 5);
+
+  if (plan.ecosystem_kit?.items?.length) {
+    const legacyPack = {
+      id: "legacy-kit",
+      name: plan.ecosystem_kit.name,
+      solves_action_ids: actions.slice(0, 3).map((action) => action.id),
+      description: `${plan.ecosystem_kit.description} ${plan.ecosystem_kit.interoperability}`,
+      total_eur: plan.ecosystem_kit.total_eur,
+      yearly_savings_eur: Math.max(95, Math.round((plan.yearly_savings_eur || 180) * 0.85)),
+      items: plan.ecosystem_kit.items,
+      vendor_url: searchUrl(plan.ecosystem_kit.name),
+    };
+    return [
+      legacyPack,
+      {
+        id: "proof-pack",
+        name: "Savings proof pack",
+        solves_action_ids: actions.filter((action) => deepFilterFor(action) === "monitor" || deepFilterFor(action) === "small-helper").slice(0, 3).map((action) => action.id),
+        description: "A lighter bundle focused on measuring before/after savings and catching inefficient always-on devices.",
+        total_eur: usableProducts.slice(0, 2).reduce((sum, item) => sum + Number(item.price_eur || 0), 0),
+        yearly_savings_eur: Math.max(75, Math.round((plan.yearly_savings_eur || 180) * 0.55)),
+        items: usableProducts.slice(0, 2),
+        vendor_url: searchUrl("energy monitoring smart plug humidity sensor"),
+      },
+    ];
+  }
+
+  const packOneItems = usableProducts.slice(0, 3);
+  const packTwoItems = usableProducts.slice(1, 4);
+  return [
+    ...provided,
+    {
+      id: "comfort-control-pack",
+      name: "Sponsored comfort control pack",
+      solves_action_ids: actions.filter((action) => ["small-helper", "monitor"].includes(deepFilterFor(action))).slice(0, 3).map((action) => action.id),
+      description: "A pitch-ready bundle for room-level heating control plus device monitoring, designed to turn recommendations into measurable savings.",
+      total_eur: packOneItems.reduce((sum, item) => sum + Number(item.price_eur || 0), 0),
+      yearly_savings_eur: Math.max(120, Math.round((plan.yearly_savings_eur || 180) * 0.9)),
+      items: packOneItems,
+      vendor_url: searchUrl(packOneItems.map((item) => item.name).join(" ")),
+    },
+    {
+      id: "monitoring-proof-pack",
+      name: "Sponsored monitoring proof pack",
+      solves_action_ids: actions.filter((action) => ["monitor", "add-info"].includes(deepFilterFor(action))).slice(0, 3).map((action) => action.id),
+      description: "A cheaper bundle focused on proof: it records appliance load and comfort data so Kenergy Loop can identify waste faster.",
+      total_eur: packTwoItems.reduce((sum, item) => sum + Number(item.price_eur || 0), 0),
+      yearly_savings_eur: Math.max(85, Math.round((plan.yearly_savings_eur || 180) * 0.65)),
+      items: packTwoItems,
+      vendor_url: searchUrl(packTwoItems.map((item) => item.name).join(" ")),
+    },
+  ].slice(0, Math.max(2, provided.length + 2));
+}
+
+function categoryRank(category: DeepRecommendedAction["category"]) {
+  return {
+    do_now: 1,
+    small_helper: 2,
+    product: 3,
+    monitor: 4,
+    add_info: 5,
+    needs_landlord: 6,
+    needs_technician: 7,
+  }[category];
+}
+
+function categoryLabel(category: DeepRecommendedAction["category"]) {
+  return {
+    do_now: "Do now",
+    small_helper: "Small helper",
+    product: "Product action",
+    monitor: "Monitor",
+    add_info: "Add info",
+    needs_landlord: "Needs landlord",
+    needs_technician: "Needs technician",
+  }[category];
+}
+
+type DeepActionFilter = "do-now" | "small-helper" | "monitor" | "add-info" | "needs-landlord";
+
+const deepFilters: Array<{ key: "all" | DeepActionFilter; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "do-now", label: "Do Now" },
+  { key: "small-helper", label: "Small Helper" },
+  { key: "monitor", label: "Monitor" },
+  { key: "add-info", label: "Add Info" },
+  { key: "needs-landlord", label: "Landlord" },
+];
+
+function deepFilterFor(action: DeepRecommendedAction): DeepActionFilter {
+  if (action.category === "do_now") return "do-now";
+  if (action.category === "monitor") return "monitor";
+  if (action.category === "add_info") return "add-info";
+  if (action.category === "needs_landlord" || action.category === "needs_technician" || action.requires_landlord || action.requires_technician) {
+    return "needs-landlord";
+  }
+  return "small-helper";
+}
+
+function productUrl(product: ProductPick) {
+  return product.product_url || searchUrl(`${product.name} ${product.brand_examples}`);
+}
+
+function searchUrl(query: string) {
+  return `https://www.amazon.de/s?k=${encodeURIComponent(query)}`;
+}
+
+function externalSources(sources?: DeepRecommendedAction["sources"]) {
+  return (sources ?? []).filter((source) => source.url?.startsWith("http"));
+}
+
+function defaultSourcesFor(topic: string) {
+  const q = topic.toLowerCase();
+  if (q.includes("renter")) return [{ label: "Verbraucherzentrale", url: "https://www.verbraucherzentrale.de/wissen/energie" }];
+  if (q.includes("monitor")) return [{ label: "Energy Saving Trust", url: "https://energysavingtrust.org.uk/advice/smart-meters/" }];
+  if (q.includes("balancing")) return [{ label: "co2online heating balancing", url: "https://www.co2online.de/modernisieren-und-bauen/heizung/hydraulischer-abgleich/" }];
+  if (q.includes("plug") || q.includes("product")) return [{ label: "Energy Saving Trust appliances", url: "https://energysavingtrust.org.uk/advice/home-appliances/" }];
+  return [{ label: "Umweltbundesamt heating guide", url: "https://www.umweltbundesamt.de/themen/richtig-heizen" }];
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1193,11 +1555,39 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
+function MetricCard({
+  label,
+  value,
+  help,
+  tone,
+}: {
+  label: string;
+  value: string;
+  help: string;
+  tone?: "money" | "energy" | "grade" | "quality";
+}) {
+  const toneClass =
+    tone === "money"
+      ? "border-primary/35 bg-primary/10 text-primary"
+      : tone === "energy"
+        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+        : tone === "grade"
+          ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
+          : tone === "quality"
+            ? "border-sky-500/30 bg-sky-500/10 text-sky-700"
+            : "border-border/60 bg-background/75 text-foreground";
   return (
-    <div className="rounded-md bg-muted p-2">
-      <div className="font-semibold">{value}</div>
-      <div className="text-muted-foreground">{label}</div>
+    <div className={`group rounded-2xl border p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${toneClass}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wide opacity-75">{label}</div>
+        <span className="relative">
+          <HelpCircle tabIndex={0} className="peer h-3.5 w-3.5 cursor-help opacity-70 outline-none transition-opacity hover:opacity-100" />
+          <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-60 rounded-xl border border-border bg-popover p-3 text-[11px] leading-relaxed text-popover-foreground opacity-0 shadow-[var(--shadow-soft)] transition-opacity peer-hover:opacity-100 peer-focus:opacity-100">
+            {help}
+          </span>
+        </span>
+      </div>
+      <div className="mt-2 text-2xl font-black">{value}</div>
     </div>
   );
 }
@@ -1223,7 +1613,7 @@ function HistoryTab() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Every diagnosis you've generated is saved. Open one to view it again — no credit is spent for re-reading old results.
+        Every Energy Report you've generated is saved. Open one to view it again — no credit is spent for re-reading old results.
       </p>
 
       {loading ? (

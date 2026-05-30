@@ -12,13 +12,13 @@ export const Route = createFileRoute("/k/$slug")({
   },
   head: ({ loaderData }) => {
     const kit = loaderData as SmartKit | undefined;
-    const title = kit?.headline?.slice(0, 60) ?? "An AI-curated smart home kit";
+    const title = kit?.headline?.slice(0, 60) ?? "An Kenergy Loop-curated smart home kit";
     const desc = kit
-      ? `${kit.items.length} compatible items · indicative total ${formatEur(kit.subtotal_eur)}. Built by Kenergy.`
-      : "AI-curated smart home kit from Kenergy.";
+      ? `${kit.items.length} compatible items · indicative total ${formatEur(kit.subtotal_eur)}. Built by Kenergy Loop.`
+      : "Kenergy Loop-curated smart home kit from Kenergy Loop.";
     return {
       meta: [
-        { title: `${title} — Kenergy` },
+        { title: `${title} — Kenergy Loop` },
         { name: "description", content: desc },
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
@@ -37,7 +37,7 @@ function KitPage() {
       <SiteNav />
       <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-          <Sparkles className="h-3 w-3" /> AI-curated kit
+          <Sparkles className="h-3 w-3" /> Kenergy Loop-curated kit
         </div>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">
           {kit.headline ?? "Smart home kit tailored to a home like yours"}
@@ -88,7 +88,7 @@ function KitPage() {
         <div className="mt-10 rounded-2xl border border-dashed border-border bg-card p-5 text-sm">
           <div className="font-semibold">Want a kit fitted to your home?</div>
           <p className="mt-1 text-muted-foreground">
-            Run the free 60-second survey and we'll generate your own AI-curated kit, sized to your rooms, heating, and budget.
+            Run the free 60-second survey and we'll generate your own Kenergy Loop-curated kit, sized to your rooms, heating, and budget.
           </p>
           <Link
             to="/survey"
@@ -99,7 +99,7 @@ function KitPage() {
         </div>
 
         <p className="mt-8 text-center text-[11px] text-muted-foreground">
-          Some links may earn Kenergy a small commission — never affects price.
+          Some links may earn Kenergy Loop a small commission — never affects price.
         </p>
       </main>
       <SiteFooter />

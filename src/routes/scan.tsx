@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertCircle, Building2, CheckCircle2, ImagePlus, Loader2, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { AlertCircle, Building2, Camera, Gauge, ImagePlus, Loader2, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { analyzeRoomScan } from "@/lib/scan.functions";
 export const Route = createFileRoute("/scan")({
   head: () => ({
     meta: [
-      { title: "Scan a room - Kenergy" },
+      { title: "Scan a room - Kenergy Loop" },
       {
         name: "description",
         content: "Upload a room photo and get a visible energy footprint estimate for appliances, heating, AC, and standby loads.",
@@ -109,13 +109,18 @@ function ScanPage() {
         <section>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
             <Sparkles className="h-3 w-3" />
-            AI room energy scan
+            Room energy scan
           </div>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Scan a room</h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
-            Upload one clear photo. Kenergy looks for visible machines, heating, cooling, windows, standby loads,
+          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Scan a room</h1>
+          <p className="mt-4 max-w-2xl text-base text-muted-foreground">
+            Upload one clear photo. Kenergy Loop looks for visible machines, heating, cooling, windows, standby loads,
             product clues, and then estimates rough yearly consumption with confidence levels.
           </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <InsightStrip icon={Camera} label="Photo-first" value="Visible devices" />
+            <InsightStrip icon={Gauge} label="Room metric" value="Energy percentile" />
+            <InsightStrip icon={ShieldCheck} label="Confidence" value="Honest ranges" />
+          </div>
 
           {!user && !authLoading && (
             <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm shadow-[var(--shadow-soft)]">
@@ -126,9 +131,9 @@ function ScanPage() {
             </div>
           )}
 
-          <div className="mt-7 rounded-3xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
+          <div className="mt-7 overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/10 p-4 shadow-[var(--shadow-soft)] transition-all duration-300 hover:border-primary/35 hover:shadow-lg sm:p-5">
             <label
-              className="group block cursor-pointer rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:border-primary hover:bg-primary/5 sm:p-6"
+              className="group block cursor-pointer rounded-2xl border-2 border-dashed border-border bg-background/85 p-4 text-center transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 sm:p-6"
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
@@ -150,7 +155,7 @@ function ScanPage() {
                 <img src={preview} alt="Selected room" className="mx-auto max-h-[420px] w-full rounded-xl object-cover" />
               ) : (
                 <div className="py-12">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+                  <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-105">
                     <ImagePlus className="h-6 w-6" />
                   </span>
                   <div className="mt-4 font-semibold">Drop a photo here or click to upload</div>
@@ -173,13 +178,15 @@ function ScanPage() {
               </div>
             )}
 
+            {busy && <AnalyzingRoom stage={stage} />}
+
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">{stage}</p>
               <button
                 type="button"
                 disabled={!file || busy || !user}
                 onClick={runScan}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                 {busy ? "Analyzing..." : "Analyze room"}
@@ -202,18 +209,23 @@ function ScanPage() {
           <InfoCard
             icon={ShieldCheck}
             title="Honest confidence"
-            text="Brand/model sources are only shown when the product identity is confident enough. Otherwise Kenergy uses generic consumption ranges."
+            text="Brand/model sources are only shown when the product identity is confident enough. Otherwise Kenergy Loop uses generic consumption ranges."
           />
-          <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-[var(--shadow-soft)]">
-            <div className="font-semibold">Best photo for the demo</div>
-            <ul className="mt-3 space-y-2 text-muted-foreground">
-              {["Use a wide room shot.", "Keep appliances visible.", "Avoid blurry or dark photos.", "Include windows, radiators, AC, or desk setups if present."].map((item) => (
-                <li key={item} className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm shadow-[var(--shadow-soft)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold">What you get back</div>
+                <p className="mt-1 text-muted-foreground">
+                  A shareable energy percentile, rough kWh ranges, likely devices, brand confidence, and a first saving action.
+                </p>
+              </div>
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-background text-primary">
+                <Gauge className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-background">
+              <div className="h-full w-2/3 rounded-full bg-primary" />
+            </div>
           </div>
         </aside>
       </main>
@@ -232,12 +244,57 @@ function InfoCard({
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg">
       <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
         <Icon className="h-5 w-5" />
       </span>
       <div className="mt-4 font-semibold">{title}</div>
       <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+function InsightStrip({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30">
+      <div className="flex items-center gap-2">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" />
+        </span>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className="text-sm font-bold">{value}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyzingRoom({ stage }: { stage: string }) {
+  const steps = ["Detect devices", "Estimate loads", "Build percentile", "Build result"];
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-primary/25 bg-background/90 p-4 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center gap-4">
+        <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+          <span className="absolute inset-0 animate-ping rounded-2xl bg-primary/20" />
+          <Sparkles className="relative h-7 w-7 animate-pulse" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold">Analyzing your room...</div>
+          <p className="mt-1 text-sm text-muted-foreground">{stage}</p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        {steps.map((step, index) => (
+          <div key={step} className="rounded-xl bg-primary/5 px-3 py-2 text-xs font-medium text-primary" style={{ animationDelay: `${index * 120}ms` }}>
+            {step}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

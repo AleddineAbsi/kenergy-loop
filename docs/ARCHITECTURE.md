@@ -1,16 +1,16 @@
-# Kenergy Architecture Reference
+# Kenergy Loop Architecture Reference
 
 Companion product strategy: `docs/PRODUCT_BRIEF.md`. Use that file for product positioning, demo priorities, recommendation principles, and confidence/disclaimer rules.
 
-This file is the working map for future changes. It reflects the current direction: Supabase for auth/data/storage, Gemini for AI, Docker Compose for local dev.
+This file is the working map for future changes. It reflects the current direction: Supabase for auth/data/storage, Gemini for model-backed recommendations, Docker Compose for local dev.
 
 ## Product Identity
 
-Kenergy is an AI energy optimizer for smart home appliances. The app should be described as:
+Kenergy Loop is a smart home energy-saving assistant. The app should be described as:
 
-- AI energy optimizer for smart home appliances
+- Smart home energy-saving assistant
 - home energy profile builder
-- AI action plan generator
+- Energy-Saving Plan generator
 - room/appliance scan assistant
 - monitoring and savings dashboard
 
@@ -22,7 +22,7 @@ Avoid framing it as only a room scanner. Scan-a-Room is a secondary feature that
 - Build/dev server: Vite
 - Styling: Tailwind CSS v4, Radix-style UI components
 - Auth/data/storage: Supabase
-- AI provider: Google Gemini API through OpenAI-compatible chat completions
+- Model provider: Google Gemini API through OpenAI-compatible chat completions
 - Charts: Recharts
 - Local runtime: Docker Compose
 
@@ -33,7 +33,6 @@ Required for normal app runtime:
 ```env
 SUPABASE_URL=
 SUPABASE_PUBLISHABLE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 GEMINI_API_KEY=
@@ -46,9 +45,9 @@ Optional:
 RESEND_API_KEY=
 ```
 
-Do not add provider-specific gateway keys or legacy gateway URLs. The app should use `GEMINI_API_KEY` for AI calls.
+Do not add provider-specific gateway keys or legacy gateway URLs. The app should use `GEMINI_API_KEY` for model calls.
 
-## AI Dependency Map
+## Energy Insight Dependency Map
 
 ### Quick Survey Estimate
 
@@ -72,7 +71,7 @@ Change here when:
 - Estimate tool schema changes
 - You want to adjust conservative savings assumptions
 
-### AI Action Plan
+### Energy-Saving Plan
 
 File: `src/lib/action-plan.functions.ts`
 
@@ -96,13 +95,13 @@ Change here when:
 - Recommendation schema changes
 - Prompt logic changes
 - Cache invalidation changes
-- You want scan results to influence action plans
+- You want scan results to influence saving plans
 
-### Deep Diagnosis
+### Deep Energy Check
 
 File: `src/lib/deep-diagnosis.functions.ts`
 
-Purpose: Paid/deep AI diagnosis with concrete product picks, tiers, ecosystem kit, and saved history.
+Purpose: Paid/deep Energy Check with concrete product picks, tiers, ecosystem kit, and saved history.
 
 Depends on:
 
@@ -195,7 +194,7 @@ Used by all protected server functions.
 
 File: `src/lib/access.functions.ts`
 
-Purpose: Reads roles/entitlements, grants demo deep analysis, consumes diagnosis credits, seeds demo accounts.
+Purpose: Reads roles/entitlements, grants demo deep analysis, consumes analysis credits, seeds demo accounts.
 
 Depends on:
 
@@ -221,14 +220,13 @@ Used by:
 - `/survey`: `src/routes/survey.tsx` quick survey and estimate
 - `/long-form`: `src/routes/long-form.tsx` deep analysis workspace/paywall
 - `/checkout/deep-analysis`: `src/routes/checkout.deep-analysis.tsx` simulated one-time purchase
-- `/recommendations`: `src/routes/recommendations.tsx` AI action plan
+- `/recommendations`: `src/routes/recommendations.tsx` Energy-Saving Plan
 - `/scan`: `src/routes/scan.tsx` private image upload
-- `/scan/result`: `src/routes/scan.result.tsx` AI scan results
+- `/scan/result`: `src/routes/scan.result.tsx` room scan results
 - `/monitoring`: `src/routes/monitoring.tsx` paid/admin monitoring dashboard
 - `/admin/monitoring`: `src/routes/admin.monitoring.tsx` admin fleet view
 - `/pricing`: `src/routes/pricing.tsx` pricing/waitlist intents
 - `/settings`: `src/routes/settings.tsx` account/settings
-- `/report`: `src/routes/report.tsx` printable/email monthly report
 - `/s/:slug`: `src/routes/s.$slug.tsx` public savings card
 - `/k/:slug`: `src/routes/k.$slug.tsx` public smart kit page
 
@@ -238,7 +236,6 @@ Used by:
 - `src/lib/phase4.ts`: readings, share cards, pricing intents
 - `src/lib/kits.ts`: save/load public smart kits
 - `src/lib/long-form-uploads.ts`: private upload metadata and storage helpers
-- `src/lib/report.functions.ts`: report DTO and direct Resend email sending
 - `src/lib/affiliates.ts`: affiliate URL helpers
 
 ## Supabase Tables
@@ -288,7 +285,7 @@ After source-only changes, keep Compose running and rely on Vite hot reload. Reb
 
 ## Change Checklist
 
-When changing AI behavior:
+When changing model-backed behavior:
 
 1. Identify which server function owns the feature.
 2. Update the tool schema and TypeScript type together.

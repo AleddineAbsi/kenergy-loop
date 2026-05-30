@@ -9,7 +9,7 @@ import { recordPricingIntent } from "@/lib/phase4";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — Kenergy" },
+      { title: "Pricing — Kenergy Loop" },
       {
         name: "description",
         content:
@@ -39,7 +39,7 @@ const tiers: Tier[] = [
     tagline: "Everything you need to start saving.",
     features: [
       "Unlimited room scans",
-      "AI action plan & share card",
+      "Energy-Saving Plan & share card",
       "Personalized free actions",
       "60-second profile",
     ],
@@ -109,7 +109,7 @@ function PricingPage() {
       <main className="mx-auto max-w-6xl px-4 py-16">
         <div className="text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-            <Sparkles className="h-3 w-3" /> Free forever for the AI plan
+            <Sparkles className="h-3 w-3" /> Free forever for the energy-saving plan
           </div>
           <h1 className="mt-3 text-4xl font-bold tracking-tight">Free advice. Paid monitoring.</h1>
           <p className="mt-3 text-muted-foreground">

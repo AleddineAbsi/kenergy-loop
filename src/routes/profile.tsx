@@ -8,8 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Your profile — Kenergy" },
-      { name: "description", content: "Your saved energy profile, surveys, and AI action plan history." },
+      { title: "Your profile — Kenergy Loop" },
+      { name: "description", content: "Your saved energy profile, surveys, and Energy-Saving Plan history." },
     ],
   }),
   component: ProfilePage,
@@ -102,7 +102,7 @@ function ProfilePage() {
             to="/recommendations"
             className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
-            View my AI action plan
+            View my Energy-Saving Plan
           </Link>
         </section>
       </main>

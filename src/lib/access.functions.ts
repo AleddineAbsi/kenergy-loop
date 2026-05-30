@@ -1,4 +1,4 @@
-// Roles, entitlements, and demo-account seeding for Kenergy.
+// Roles and entitlements for Kenergy Loop.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -53,7 +53,7 @@ export const grantDeepAnalysis = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Consume one diagnosis credit (called from generateDeepDiagnosis on new runs).
+// Consume one analysis credit (called from generateDeepDiagnosis on new runs).
 export async function consumeDiagnosisCredit(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   userId: string,
@@ -76,77 +76,3 @@ export async function consumeDiagnosisCredit(
   return true;
 }
 
-// Idempotent demo-account seeding. Uses the admin client.
-const DEMO = {
-  admin: { email: "admin@kenergy.demo", password: "KenergyAdmin!23", display_name: "Kenergy Admin" },
-  user: { email: "user@kenergy.demo", password: "KenergyUser!23", display_name: "Demo User" },
-};
-
-export const seedDemoAccounts = createServerFn({ method: "POST" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  async function ensureUser(spec: { email: string; password: string; display_name: string }) {
-    // List existing users (paginated, first page is enough for demo).
-    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    let user = list?.users?.find((u) => u.email === spec.email);
-    if (!user) {
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: spec.email,
-        password: spec.password,
-        email_confirm: true,
-        user_metadata: { display_name: spec.display_name },
-      });
-      if (error) throw new Error(`create ${spec.email}: ${error.message}`);
-      user = data.user!;
-    }
-    return user!;
-  }
-
-  const admin = await ensureUser(DEMO.admin);
-  const user = await ensureUser(DEMO.user);
-
-  // Grant admin + paid role to admin account.
-  await supabaseAdmin
-    .from("user_roles")
-    .upsert(
-      [
-        { user_id: admin.id, role: "admin" as const },
-        { user_id: admin.id, role: "paid" as const },
-      ],
-      { onConflict: "user_id,role" },
-    );
-
-  // Ensure admin has a long-lived deep_analysis entitlement (credits topped up).
-  const { data: adminEnt } = await supabaseAdmin
-    .from("entitlements")
-    .select("id")
-    .eq("user_id", admin.id)
-    .eq("product", "deep_analysis")
-    .maybeSingle();
-  if (!adminEnt) {
-    await supabaseAdmin.from("entitlements").insert({
-      user_id: admin.id,
-      product: "deep_analysis",
-      source: "admin_grant",
-      credits_remaining: 999,
-    });
-  }
-
-  // Seed a sample survey for the demo user so the free experience isn't empty.
-  await supabaseAdmin.from("survey_responses").upsert(
-    {
-      user_id: user.id,
-      answers: {
-        home: "Apartment",
-        size: "55",
-        people: "2",
-        heating: "Central gas",
-        goal: "Lower my bill",
-      },
-      seconds_taken: 58,
-    },
-    { onConflict: "user_id" },
-  );
-
-  return { ok: true, accounts: [DEMO.admin.email, DEMO.user.email] };
-});

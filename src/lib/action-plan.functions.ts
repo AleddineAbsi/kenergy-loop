@@ -1,7 +1,7 @@
-// Phase 3 — Real AI action plan via Gemini.
+// Phase 3 — Real Energy-Saving Plan via Gemini.
 //
 // generateActionPlan() reads the signed-in user's quick survey + long-form
-// answers, asks Gemini for a structured action plan via
+// answers, asks Gemini for a structured saving plan via
 // tool-calling, caches the result in `ai_action_plans` keyed by a hash of
 // the inputs, and returns it. The cache is busted whenever survey or
 // long-form answers change.
@@ -65,12 +65,65 @@ export type AIActionPlan = {
   cached?: boolean;
 };
 
+const SOURCE_LIBRARY = {
+  thermostat: [
+    { label: "ENERGY STAR smart thermostats", url: "https://www.energystar.gov/products/smart_thermostats" },
+    { label: "Verbraucherzentrale thermostat guidance", url: "https://www.verbraucherzentrale.de/wissen/energie/heizen-und-warmwasser/heizkosten-sparen-thermostat-richtig-einstellen-und-wechseln-7940" },
+  ],
+  standby: [
+    { label: "U.S. DOE standby power reduction", url: "https://www.energy.gov/energysaver/articles/3-easy-tips-reduce-your-standby-power-loads" },
+    { label: "European Commission standby/off-mode rules", url: "https://energy-efficient-products.ec.europa.eu/faqs/product-faqs/standby-and-networked-standby-mode-faqs_en" },
+  ],
+  plugLoad: [
+    { label: "U.S. DOE plug load management", url: "https://www.energy.gov/eere/buildings/zeb-technologies-plug-load-management" },
+  ],
+  appliance: [
+    { label: "European Commission energy-efficient products", url: "https://energy-efficient-products.ec.europa.eu/index_en" },
+  ],
+  default: [
+    { label: "U.S. DOE Energy Saver", url: "https://www.energy.gov/energysaver/energy-saver" },
+  ],
+} satisfies Record<string, AISource[]>;
+
+function sourcesForRecommendation(rec: AIRecommendation): AISource[] {
+  const text = `${rec.title} ${rec.description} ${rec.why} ${rec.how_it_works} ${rec.how_to_proceed}`.toLowerCase();
+  if (/(thermostat|trv|radiator|heating|heat|temperature|valve)/.test(text)) return SOURCE_LIBRARY.thermostat;
+  if (/(standby|idle|always-on|power strip|off mode|networked standby)/.test(text)) return SOURCE_LIBRARY.standby;
+  if (/(smart plug|plug load|socket|monitoring plug|power meter)/.test(text)) return SOURCE_LIBRARY.plugLoad;
+  if (/(fridge|freezer|dishwasher|washing|dryer|appliance|label|replacement)/.test(text)) return SOURCE_LIBRARY.appliance;
+  return SOURCE_LIBRARY.default;
+}
+
+function sanitizeRecommendation(rec: AIRecommendation, index: number): AIRecommendation {
+  const assumptionBased = /\bassumption:/i.test(`${rec.why} ${rec.how_it_works} ${rec.description}`);
+  const cleanSources = (rec.sources ?? []).filter((source) => {
+    const label = source.label?.toLowerCase() ?? "";
+    const url = source.url?.toLowerCase() ?? "";
+    return Boolean(source.url) && /^https?:\/\//.test(source.url ?? "") && !label.includes("kenergy") && !label.includes("internal") && !url.includes("localhost");
+  });
+
+  return {
+    ...rec,
+    confidence: assumptionBased
+      ? Math.min(55, Math.max(25, Math.round(rec.confidence || 45)))
+      : Math.max(0, Math.min(100, Math.round(rec.confidence || 60))),
+    sources: cleanSources.length ? cleanSources.slice(0, 2) : sourcesForRecommendation(rec),
+  };
+}
+
+function sanitizePlan(plan: AIActionPlan): AIActionPlan {
+  return {
+    ...plan,
+    recommendations: (plan.recommendations ?? []).map(sanitizeRecommendation),
+  };
+}
+
 const planTool = {
   type: "function" as const,
   function: {
     name: "return_action_plan",
     description:
-      "Return a personalized smart-home energy action plan for the user based on their survey and long-form answers.",
+      "Return a personalized smart-home energy saving plan for the user based on their survey and long-form answers.",
     parameters: {
       type: "object",
       properties: {
@@ -126,7 +179,7 @@ const planTool = {
               },
               sources: {
                 type: "array",                description:
-                  "When possible, cite the basis for the savings number: agency reports (BfEE, ADEME, dena, IEA, Eurostat), vendor specs, or a well-known study. Skip rather than invent.",
+                  "External clickable sources only. Cite why the action works or the savings basis: public agency pages, studies, vendor specs, or official guidance. Do not cite Kenergy Loop, internal estimates, user answers, or generic knowledge base text.",
                 items: {
                   type: "object",
                   properties: {
@@ -191,7 +244,7 @@ function fallbackPlan(): AIActionPlan {
     energy_score: 50,
     grade: "D",
     summary:
-      "Complete the 60-second survey to unlock your personalized AI action plan.",
+      "Complete the 60-second survey to unlock your personalized Energy-Saving Plan.",
     recommendations: [],
     smart_home_kit: [],
     data_quality: "low",
@@ -233,7 +286,7 @@ export const generateActionPlan = createServerFn({ method: "POST" })
         .maybeSingle();
       if (cached && cached.inputs_hash === inputs_hash && cached.plan) {
         return {
-          ...(cached.plan as AIActionPlan),
+          ...sanitizePlan(cached.plan as AIActionPlan),
           model: cached.model ?? undefined,
           generated_at: cached.updated_at as string,
           cached: true,
@@ -244,37 +297,21 @@ export const generateActionPlan = createServerFn({ method: "POST" })
     const ai = getAIConfig();
 
     const knowledgeText = [
-      "- Smart thermostats and TRVs can reduce heating energy by roughly 8-20% when schedules and room-level setpoints replace manual heating.",
-      "- Standby power is often small per device but meaningful across many always-on appliances; smart plugs and power strips help identify and cut waste.",
-      "- Heat pumps, EV chargers, dishwashers, washing machines, and dryers benefit from tariff-aware scheduling when the household has a dynamic or day/night tariff.",
-      "- Old fridges, freezers, TVs, servers, and pumps are common high-consumption replacement candidates when age, noise, heat, or high standby draw is visible.",
-      "- Renters should prefer reversible measures first: schedules, TRVs where allowed, smart plugs, presence sensors, LED lighting, and monitoring before fixed electrical work.",
-      "- For electrical work, sub-metering, or hardwired devices, recommend a certified electrician. For heating hydraulics and boiler changes, recommend a heating engineer and landlord approval when rented.",
+      "TRVs/smart thermostats: 8-20% heating saving when schedules/room setpoints replace manual heating.",
+      "Standby waste: smart plugs/strips identify always-on loads; small per device but meaningful together.",
+      "Tariff scheduling: heat pumps, EV chargers, dishwasher/washer/dryer can shift load if dynamic tariff exists.",
+      "Old fridges/freezers/TVs/servers/pumps can justify replacement when age/noise/heat/high draw is likely.",
+      "Renters: prefer reversible actions first; fixed work needs landlord/professional approval.",
     ].join("\n");
 
-    const systemPrompt = `You are Kenergy, an AI energy optimizer for smart home appliances in European rentals (EUR, kWh, ~0.28 €/kWh, ~0.22 kg CO2 per kWh).
-You build a personalized action plan from the user's quick survey and (optional) long-form profile.
-Ground every recommendation in the Knowledge Base snippets below — prefer their numbers, brands, and savings ranges over generic guesses. If a topic is not covered, be conservative and lower confidence.
+const systemPrompt = `Kenergy Loop: European renter energy optimizer. Use EUR/kWh/CO2 assumptions: 0.28 EUR/kWh, 0.22 kg CO2/kWh.
+Return only the tool call. Be concise.
+Rules: produce every useful recommendation that is justified by the profile, normally 5-9 but more if genuinely helpful. You may add creative assumption-based recommendations for missing data, but every such recommendation must clearly start its why/how text with "Assumption:" and say exactly what it assumes. Never assume against provided data. Assumption-based recommendations must have low confidence, normally 25-55. Explain savings, next step, confidence, and source when available. Sources must be external clickable URLs that support why the action works or the savings basis; never cite Kenergy Loop, internal data, user answers, or the KB text as a source. Prefer reversible renter actions first; hardware work names landlord/electrician/heating technician as needed. Use realistic Matter/Zigbee/Wi-Fi brands for kits only when justified. Sparse data or assumptions => lower confidence/data_quality. Set data_quality=high only when long-form answers, bills, meter readings, or room scan data are present; quick survey alone should be low or medium.`;
 
-Rules:
-- Be specific to the user's heating, household size, home size, standby habits, and stated goal.
-- Quality > quantity. Only include a recommendation if it is genuinely useful for THIS user. NEVER pad to fill categories — it is perfectly fine to skip "do-now", "small-helper", "add-info", "needs-landlord", or "monitor" entirely if nothing meaningful applies.
-- For each recommendation, write for a general (non-technical) audience: explain HOW it saves energy in plain words, and give concrete next steps. If hardware install is required, name the device, what it does, and which professional to contact (e.g. certified electrician / Elektriker, heating engineer / Heizungsmonteur, landlord), plus a rough way to find one.
-- Confidence (0-100) MUST reflect how confident the suggestion is given the available user information. With sparse data, lower confidence; with rich data (long-form, bill, scan), raise it. Be honest — do not inflate.
-- When possible, cite sources for savings ranges (BfEE, dena, ADEME, IEA, Eurostat, vendor specs, peer-reviewed studies). Skip rather than invent a source.
-- The smart home kit must list real, compatible Matter/Zigbee/Wi-Fi brands (e.g. tado°, Shelly, Aqara, Philips Hue, TP-Link Tapo, AVM FRITZ!DECT, Home Assistant Green). No vendor lock-in. Skip the kit entirely if nothing is justified.
-- Be conservative on savings if data is sparse — set data_quality accordingly.
-- Always reply by calling the return_action_plan tool. Never reply with plain text.`;
-
-    const userPrompt = `Knowledge Base:\n${knowledgeText}\n\nQuick survey answers:\n${JSON.stringify(
-      survey?.answers ?? {},
-      null,
-      2,
-    )}\n\nLong-form profile (may be partial, progress ${longForm?.progress ?? 0}%):\n${JSON.stringify(
-      longForm?.answers ?? {},
-      null,
-      2,
-    )}`;
+    const userPrompt = `KB:${knowledgeText}
+survey:${JSON.stringify(survey?.answers ?? {})}
+longFormProgress:${longForm?.progress ?? 0}
+longForm:${JSON.stringify(longForm?.answers ?? {})}`;
 
 
     const res = await fetch(ai.url, {
@@ -291,34 +328,35 @@ Rules:
         ],
         tools: [planTool],
         tool_choice: "auto",
+        max_tokens: 2500,
       }),
     });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       if (res.status === 429) {
-        throw new Error("Rate limit reached on the AI service — please try again in a minute.");
+        throw new Error("Rate limit reached on the model service — please try again in a minute.");
       }
       if (res.status === 402) {
-        throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
+        throw new Error("model credits exhausted. Add credits in Settings → Workspace → Usage.");
       }
       console.error("Gemini API error:", res.status, text);
-      throw new Error(`AI gateway failed (${res.status})`);
+      throw new Error(`model gateway failed (${res.status})`);
     }
 
     const completion = await res.json();
     const toolCall = completion?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       console.error("No tool call returned:", JSON.stringify(completion).slice(0, 500));
-      throw new Error("AI did not return a structured plan");
+      throw new Error("The model did not return a structured plan");
     }
 
     let plan: AIActionPlan;
     try {
-      plan = JSON.parse(toolCall.function.arguments);
+      plan = sanitizePlan(JSON.parse(toolCall.function.arguments));
     } catch (e) {
-      console.error("Bad JSON from AI tool call:", e);
-      throw new Error("AI returned malformed plan JSON");
+      console.error("Bad JSON from model tool call:", e);
+      throw new Error("The model returned malformed plan JSON");
     }
 
     // Upsert into cache.

@@ -13,17 +13,17 @@ import { SiteNav, SiteFooter } from "@/components/site-nav";
 export const Route = createFileRoute("/analysis-tool")({
   head: () => ({
     meta: [
-      { title: "Deeper analysis tool — Kenergy" },
+      { title: "Deeper analysis tool — Kenergy Loop" },
       {
         name: "description",
         content:
-          "How the Kenergy deeper analysis tool sharpens your AI plan using bill uploads, room photos, and a few extra questions.",
+          "How the Kenergy Loop deeper analysis tool sharpens your energy-saving plan using bill uploads, room photos, and a few extra questions.",
       },
-      { property: "og:title", content: "Deeper analysis tool — Kenergy" },
+      { property: "og:title", content: "Deeper analysis tool — Kenergy Loop" },
       {
         property: "og:description",
         content:
-          "Optional, friendly tools (bill upload, room scan, deeper profile) that raise the confidence of your AI energy plan.",
+          "Optional, friendly tools (bill upload, room scan, deeper profile) that raise the confidence of your energy-saving plan.",
       },
     ],
   }),
@@ -41,7 +41,7 @@ function AnalysisToolPage() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight">The deeper analysis tool</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">
           Your 60-second plan is already useful. The deeper analysis tool is for when you want
-          higher-confidence numbers and more specific recommendations — by giving the AI a clearer
+          higher-confidence numbers and more specific recommendations — by giving Kenergy Loop a clearer
           picture of your actual home and consumption.
         </p>
 
@@ -49,13 +49,13 @@ function AnalysisToolPage() {
           <Tool
             icon={<ListChecks className="h-5 w-5" />}
             title="Deeper profile (≈15 questions)"
-            body="A few extra answers about appliances, heating habits, and daily usage. Each answer narrows the AI's assumptions, so estimates stop being averages and start being yours."
+            body="A few extra answers about appliances, heating habits, and daily usage. Each answer narrows the estimate, so estimates stop being averages and start being yours."
             cta={{ to: "/long-form", label: "Open the deeper profile" }}
           />
           <Tool
             icon={<FileText className="h-5 w-5" />}
             title="Bill upload"
-            body="Drop in a recent electricity or heating bill (PDF or photo). The AI reads your real kWh/year and tariff, then re-grounds every savings number on actual consumption — no more rough guesses."
+            body="Drop in a recent electricity or heating bill (PDF or photo). Kenergy Loop reads your real kWh/year and tariff, then re-grounds every savings number on actual consumption — no more rough guesses."
             cta={{ to: "/long-form", label: "Upload a bill" }}
           />
           <Tool
@@ -82,12 +82,12 @@ function AnalysisToolPage() {
             <Bullet
               icon={<Sparkles className="h-4 w-4 text-primary" />}
               title="Smarter recommendations"
-              body="Photos let the AI skip irrelevant advice (you already have LEDs) and surface specific wins (a 90W TV cluster on standby; a north-facing single-pane window)."
+              body="Photos help Kenergy Loop skip irrelevant advice (you already have LEDs) and surface specific wins (a 90W TV cluster on standby; a north-facing single-pane window)."
             />
             <Bullet
               icon={<ShieldCheck className="h-4 w-4 text-primary" />}
               title="Source-cited where possible"
-              body="When the AI relies on public figures (BfEE, dena, ADEME, IEA, vendor specs) it cites them. Deeper data lets it cite YOUR data instead — even better."
+              body="When Kenergy Loop relies on public figures (BfEE, dena, ADEME, IEA, vendor specs) it cites them. Deeper data lets it cite YOUR data instead — even better."
             />
           </ul>
         </section>

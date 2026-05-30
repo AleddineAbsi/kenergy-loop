@@ -39,6 +39,9 @@ export async function retrieveKnowledge(
   query: string,
   opts: { matchCount?: number; minSimilarity?: number } = {},
 ): Promise<KnowledgeChunk[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return [];
+  }
   const [embedding] = await embedText(query);
   const { data, error } = await supabaseAdmin.rpc("match_knowledge_chunks", {
     query_embedding: embedding as unknown as string,

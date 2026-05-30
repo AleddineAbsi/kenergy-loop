@@ -10,7 +10,7 @@ import { grantDeepAnalysis } from "@/lib/access.functions";
 export const Route = createFileRoute("/checkout/deep-analysis")({
   head: () => ({
     meta: [
-      { title: "Unlock Deep Analysis — Kenergy" },
+      { title: "Unlock Deep Analysis — Kenergy Loop" },
       { name: "description", content: "One-time Deep Analysis: full questionnaire, bill uploads, product picks, and ecosystem kit." },
     ],
   }),
@@ -52,19 +52,19 @@ function CheckoutPage() {
           <h1 className="text-3xl font-bold tracking-tight">Deep Analysis — €19</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Unlock the full diagnostic workspace: detailed questionnaire, electricity-bill &amp;
-            appliance-photo uploads, an AI-written diagnosis with concrete product picks across three
-            tiers, and an interoperable ecosystem kit you can later plug into the Kenergy dashboard.
-            Your diagnosis is saved forever — view it anytime without re-spending credits.
+            appliance-photo uploads, a Kenergy Loop-written Energy Report with concrete product picks across three
+            tiers, and an interoperable ecosystem kit you can later plug into the Kenergy Loop dashboard.
+            Your Energy Report is saved forever — view it anytime without re-spending credits.
           </p>
 
           <ul className="mt-6 space-y-2 text-sm">
             {[
               "Detailed long-form questionnaire (heating, PV, EV, schedules…)",
               "Upload bills & appliance photos as evidence",
-              "Free-text notes — talk directly to the AI",
+              "Free-text notes — add anything we should know",
               "Concrete product picks: budget · balanced · integrated",
               "Compatible ecosystem kit (Matter / Zigbee / Home Assistant)",
-              "Saved history — no re-running the AI to revisit it",
+              "Saved history — no re-running the check to revisit it",
             ].map((b) => (
               <li key={b} className="flex items-start gap-2">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertCircle, ArrowRight, BadgeEuro, Gauge, Info, Loader2, Sparkles, Trophy } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeEuro, Gauge, Info, Sparkles, Trophy, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { z } from "zod";
@@ -13,8 +13,8 @@ const searchSchema = z.object({ id: z.string().optional() });
 export const Route = createFileRoute("/scan_/result")({
   head: () => ({
     meta: [
-      { title: "Room scan result - Kenergy" },
-      { name: "description", content: "Your Kenergy room scan result." },
+      { title: "Room scan result - Kenergy Loop" },
+      { name: "description", content: "Your Kenergy Loop room scan result." },
     ],
   }),
   validateSearch: searchSchema,
@@ -119,8 +119,7 @@ function ScanResultPage() {
     return (
       <Shell>
         <ResultFrame>
-          <Loader2 className="mx-auto h-7 w-7 animate-spin text-primary" />
-          <p className="mt-3 text-sm text-muted-foreground">Loading room scan result...</p>
+          <ScanResultLoading />
         </ResultFrame>
       </Shell>
     );
@@ -136,15 +135,15 @@ function ScanResultPage() {
 
   return (
     <Shell>
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-7">
+      <main className="mx-auto max-w-5xl flex-1 px-4 py-10 sm:py-14">
+        <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/10 p-5 shadow-[var(--shadow-soft)] sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
                 <Sparkles className="h-3 w-3" />
                 Visible energy footprint
               </div>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight">Your room energy score</h1>
+              <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Your room energy footprint</h1>
             </div>
             {scan?.model && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">{scan.model}</span>}
           </div>
@@ -154,13 +153,13 @@ function ScanResultPage() {
           {!analysis && !problem && (
             <ProblemBlock
               title="There was a problem"
-              text="The result page loaded, but no LLM output was available for this scan."
+              text="The result page loaded, but no model output was available for this scan."
             />
           )}
 
           {analysis && (
             <section className="mt-6 grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
-              <div className="rounded-2xl p-6 text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>
+              <div className="rounded-3xl p-6 text-primary-foreground shadow-[var(--shadow-soft)] transition-transform duration-300 hover:-translate-y-1" style={{ background: "var(--gradient-hero)" }}>
                 <div className="text-xs uppercase tracking-wide opacity-80">{analysis.room_type || "Room"}</div>
                 <div className="mt-5 rounded-2xl bg-white/15 p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -178,7 +177,7 @@ function ScanResultPage() {
                     {socialMetric.title}
                   </div>
                 </div>
-                {imageUrl && <img src={imageUrl} alt="Scanned room" className="mt-5 max-h-56 w-full rounded-xl object-cover" />}
+                {imageUrl && <img src={imageUrl} alt="Scanned room" className="mt-5 h-56 w-full rounded-xl object-cover shadow-lg" />}
               </div>
 
               <div className="space-y-4">
@@ -192,7 +191,7 @@ function ScanResultPage() {
                     ["Room kWh/year", String(Math.round(analysis.est_room_kwh_per_year ?? 0))],
                   ]}
                 />
-                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
                     <Gauge className="h-4 w-4" />
                     Top action
@@ -212,10 +211,10 @@ function ScanResultPage() {
 
           {analysis?.appliances?.length ? (
             <section className="mt-8">
-              <h2 className="text-xl font-bold tracking-tight">What Kenergy noticed</h2>
-              <div className="mt-3 grid gap-3">
+              <h2 className="text-xl font-bold tracking-tight">What Kenergy Loop noticed</h2>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {analysis.appliances.map((item, index) => (
-                  <article key={`${item.name}-${index}`} className="rounded-2xl border border-border bg-background p-4">
+                  <article key={`${item.name}-${index}`} className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg">
                     <div className="flex gap-4">
                       <MachineThumb category={item.category} name={item.name} />
                       <div className="min-w-0 flex-1">
@@ -256,16 +255,16 @@ function ScanResultPage() {
               </div>
             </section>
           ) : analysis ? (
-            <ProblemBlock title="No machines returned" text="The LLM output exists, but it did not include detected appliances." />
+            <ProblemBlock title="No machines returned" text="The model output exists, but it did not include detected appliances." />
           ) : null}
 
-          <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5">
+          <div className="mt-8 rounded-3xl border border-primary/30 bg-primary/5 p-5 shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
             <div className="flex items-center gap-2 font-semibold">
               <BadgeEuro className="h-5 w-5 text-primary" />
               Want sharper numbers and more advanced recommendations?
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Take the free 60-second survey and get your result immediately. Kenergy will use your home size,
+              Take the free 60-second survey and get your result immediately. Kenergy Loop will use your home size,
               heating type, household size, and budget instead of only a photo.
             </p>
             <Link to="/survey" className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
@@ -286,7 +285,7 @@ function ScanResultPage() {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <SiteNav />
       {children}
       <SiteFooter />
@@ -295,7 +294,35 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function ResultFrame({ children }: { children: ReactNode }) {
-  return <main className="mx-auto max-w-3xl px-4 py-24 text-center">{children}</main>;
+  return <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-24 text-center">{children}</main>;
+}
+
+function ScanResultLoading() {
+  return (
+    <div className="mx-auto max-w-md rounded-3xl border border-primary/20 bg-card p-8 shadow-[var(--shadow-soft)]">
+      <div className="relative mx-auto grid h-20 w-20 place-items-center rounded-3xl bg-primary/10 text-primary">
+        <span className="absolute inset-0 animate-ping rounded-3xl bg-primary/20" />
+        <Zap className="relative h-8 w-8 animate-pulse" />
+      </div>
+      <h2 className="mt-5 text-xl font-bold">Preparing your result</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Loading the detected machines, energy percentile, and savings estimate.
+      </p>
+      <div className="mt-5 grid gap-2">
+        {["Appliance estimate", "Percentile check", "Top action"].map((item, index) => (
+          <div key={item} className="overflow-hidden rounded-xl bg-muted p-2 text-left text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>{item}</span>
+              <span className="text-primary">...</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
+              <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${55 + index * 15}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ProblemBlock({ title, text }: { title: string; text: string }) {
@@ -353,10 +380,9 @@ function PercentileInfo({ percentile }: { percentile: number }) {
         <Info className="h-4 w-4" />
       </button>
       <span className="pointer-events-none absolute right-0 top-9 z-10 hidden w-72 rounded-xl border border-border bg-popover p-3 text-left text-xs font-normal leading-relaxed text-popover-foreground shadow-[var(--shadow-soft)] group-hover:block group-focus-within:block">
-        This means the room appears more energy-heavy than about {percentile}% of comparable German rooms,
+        This means the room appears more energy-heavy than about {percentile}% of comparable rooms,
         and lighter than about {100 - percentile}%. The calculation compares visible estimated room kWh
-        against German household electricity benchmark bands from Stromspiegel-style ranges. It is a
-        photo-based estimate, not a meter reading.
+        against broad household electricity benchmark bands. It is a photo-based estimate, not a meter reading.
       </span>
     </span>
   );

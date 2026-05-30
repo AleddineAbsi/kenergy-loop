@@ -1,21 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { ShieldCheck, User as UserIcon, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { seedDemoAccounts } from "@/lib/access.functions";
-
-const DEMO_ACCOUNTS = [
-  { kind: "admin" as const, label: "Admin (paid + monitoring)", email: "admin@kenergy.demo", password: "KenergyAdmin!23", icon: ShieldCheck },
-  { kind: "user" as const, label: "Free user", email: "user@kenergy.demo", password: "KenergyUser!23", icon: UserIcon },
-];
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign in — Kenergy" },
-      { name: "description", content: "Sign in to save your energy profile and AI action plan." },
+      { title: "Sign in — Kenergy Loop" },
+      { name: "description", content: "Sign in to save your energy profile and Energy-Saving Plan." },
     ],
   }),
   component: LoginPage,
@@ -79,30 +72,6 @@ function LoginPage() {
     }
   }
 
-  const seedFn = useServerFn(seedDemoAccounts);
-  async function handleDemo(kind: "admin" | "user") {
-    setError(null);
-    setBusy(true);
-    try {
-      const account = DEMO_ACCOUNTS.find((a) => a.kind === kind)!;
-      // Ensure demo accounts exist (idempotent).
-      try {
-        await seedFn();
-      } catch {
-        // ignore — accounts may already exist
-      }
-      const { error } = await supabase.auth.signInWithPassword({
-        email: account.email,
-        password: account.password,
-      });
-      if (error) throw error;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Demo sign-in failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="grid min-h-screen place-items-center bg-background px-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
@@ -110,14 +79,14 @@ function LoginPage() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
             <Zap className="h-4 w-4" />
           </span>
-          <span>Kenergy</span>
+          <span>Kenergy Loop</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight">
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "signin"
-            ? "Sign in to keep your energy profile and AI action plan."
+            ? "Sign in to keep your energy profile and Energy-Saving Plan."
             : "Save your energy profile and track your savings over time."}
         </p>
 
@@ -173,7 +142,7 @@ function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          {mode === "signin" ? "New to Kenergy?" : "Already have an account?"}{" "}
+          {mode === "signin" ? "New to Kenergy Loop?" : "Already have an account?"}{" "}
           <button
             onClick={() => {
               setMode(mode === "signin" ? "signup" : "signin");
@@ -186,31 +155,11 @@ function LoginPage() {
         </p>
 
         <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/40 p-3">
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Demo accounts (testing)
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Demo note
           </div>
-          <div className="grid gap-2">
-            {DEMO_ACCOUNTS.map((acc) => {
-              const Icon = acc.icon;
-              return (
-                <button
-                  key={acc.kind}
-                  type="button"
-                  onClick={() => handleDemo(acc.kind)}
-                  disabled={busy}
-                  className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-xs font-medium hover:bg-muted disabled:opacity-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
-                    {acc.label}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">Sign in →</span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">
-            Admin has deep analysis + monitoring unlocked. Free user shows the paywalled experience.
+          <p className="mt-2 text-xs text-muted-foreground">
+            Create a normal account to test the app. Demo-account seeding was removed so the public build does not require a Supabase service-role key.
           </p>
         </div>
       </div>

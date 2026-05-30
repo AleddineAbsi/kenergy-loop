@@ -1,14 +1,14 @@
-# Kenergy Product Brief
+# Kenergy Loop Product Brief
 
 This document captures the product direction behind the app and should be used together with `docs/ARCHITECTURE.md` when changing code.
 
 ## One-Line Pitch
 
-Kenergy is a renter-first energy savings web app that turns a room photo into a shareable energy score, then helps users build a progressive energy profile, get free energy-saving recommendations, and optionally monitor consumption over time.
+Kenergy Loop is a renter-first energy savings web app that turns a room photo into a shareable energy score, then helps users build a progressive energy profile, get free energy-saving recommendations, and optionally monitor consumption over time.
 
 ## Core Idea
 
-Most energy tools target homeowners, renovations, solar panels, or heat pumps. Kenergy focuses on renters and apartment dwellers who pay energy bills but often cannot renovate, do not know what saves money, and may not have smart meters.
+Most energy tools target homeowners, renovations, solar panels, or heat pumps. Kenergy Loop focuses on renters and apartment dwellers who pay energy bills but often cannot renovate, do not know what saves money, and may not have smart meters.
 
 The entry point is intentionally low-friction:
 
@@ -32,7 +32,7 @@ Then the app converts curiosity into action:
 | Photo-first hook | Start with a room scan instead of a long audit form. |
 | Free suggestions | Recommendations should build trust and not be hidden behind payment. |
 | Progressive profile | Accuracy improves as users add bills, readings, photos, and completed actions. |
-| Explainable AI | Every suggestion should say why it applies and how confident it is. |
+| Explainable recommendations | Every suggestion should say why it applies and how confident it is. |
 | Manual-first monitoring | Meter readings and bills work before smart-meter integrations. |
 | Paid monitoring, not paid advice | Monetize ongoing tracking, alerts, reports, integrations, and product offers. |
 
@@ -177,16 +177,16 @@ Use this stack:
 | File storage | Supabase Storage |
 | Backend logic | TanStack Start server functions |
 | RAG/vector search | Supabase pgvector utilities |
-| AI provider | Gemini API |
+| Model provider | Gemini API |
 | Charts | Recharts |
 | Payments later | Stripe |
 | Local dev | Docker Compose |
 
-AI keys must stay server-side. The browser must never receive provider API keys.
+Model keys must stay server-side. The browser must never receive provider API keys.
 
-## AI Architecture
+## Energy Insight Architecture
 
-The AI should not be one giant black box. Keep focused functions:
+The recommendation engine should not be one giant black box. Keep focused functions:
 
 | Function concept | Current code owner |
 | --- | --- |
@@ -194,14 +194,14 @@ The AI should not be one giant black box. Keep focused functions:
 | profile_builder | survey/long-form response helpers and routes |
 | generate_recommendations | `src/lib/action-plan.functions.ts` |
 | rag_search | `src/lib/rag.server.ts`, `src/lib/rag.functions.ts` |
-| bill_parser_agent | future work, probably upload/report path |
-| monthly_report_agent | `src/lib/report.functions.ts` |
+| bill_parser_agent | future work for bill-upload analysis |
+| monthly_report_agent | future monitoring/reporting module |
 | landlord_email_agent | future work |
 | alert_explainer | monitoring alert helpers |
 
 Main rule:
 
-> Rules decide. RAG supports. LLM explains.
+> Rules decide. RAG supports. model explains.
 
 For MVP, do not train a model. Use rules, curated knowledge, and Gemini explanations. Keep mock/demo fallback available where practical to protect presentations.
 
@@ -305,7 +305,7 @@ Priority order:
 ## Required Disclaimers
 
 - A photo scan is not a real meter reading.
-- Rankings are estimates unless based on real Kenergy user data.
+- Rankings are estimates unless based on real Kenergy Loop user data.
 - Energy savings are approximate.
 - Electrical/heating work should be done by professionals.
 - Legal/tenant-right advice is non-legal guidance.
@@ -315,7 +315,7 @@ Priority order:
 
 Best sentence:
 
-> Kenergy starts with a viral Room Energy Scan, then turns curiosity into free energy-saving actions and a paid monitoring loop for renters.
+> Kenergy Loop starts with a viral Room Energy Scan, then turns curiosity into free energy-saving actions and a paid monitoring loop for renters.
 
 Short version:
 

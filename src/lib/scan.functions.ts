@@ -110,7 +110,7 @@ function fallbackRoomAnalysis(reason: string): RoomAnalysis {
         est_hours_per_day: 3,
         est_kwh_per_year: 95,
         consumption_basis: "rough_assumption",
-        notes: "Fallback estimate only. Run the AI scan again for object-level detection.",
+        notes: "Fallback estimate only. Run the room scan again for object-level detection.",
       },
       {
         name: "Room lighting",
@@ -179,7 +179,7 @@ function stripJsonFence(text: string) {
   return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
 }
 
-const prompt = `Analyze this renter room photo for Kenergy.
+const prompt = `Analyze this renter room photo for Kenergy Loop.
 
 Return one JSON object only. Do not wrap it in markdown.
 

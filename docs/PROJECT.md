@@ -1,7 +1,7 @@
 # Kenergy Loop
 
-Kenergy is an AI energy optimizer for smart home appliances. It helps households
-build an energy profile, generate an AI action plan, scan rooms for appliance
+Kenergy Loop is a smart home energy-saving assistant. It helps households
+build an energy profile, generate an Energy-Saving Plan, scan rooms for appliance
 hotspots, monitor usage, and share savings results.
 
 ## Stack
@@ -9,13 +9,13 @@ hotspots, monitor usage, and share savings results.
 - TanStack Start, TanStack Router, React, Vite
 - Tailwind CSS and Radix-style UI components
 - Supabase Auth, database, row-level security, and storage
-- Google Gemini API for AI generation
+- Google Gemini API for structured recommendation generation
 - Recharts for monitoring dashboards
 - Docker Compose for local development
 
-## AI Provider
+## Model Provider
 
-All app AI features call Gemini directly through the OpenAI-compatible Gemini
+All app model-backed features call Gemini directly through the OpenAI-compatible Gemini
 endpoint:
 
 ```text
@@ -26,10 +26,10 @@ Required environment variables:
 
 ```env
 GEMINI_API_KEY=
-KENERGY_AI_MODEL=gemini-3-flash-preview
+KENERGY_AI_MODEL=gemini-2.5-flash
 ```
 
-The main AI server functions are:
+The main energy insight server functions are:
 
 - `src/lib/action-plan.functions.ts`
 - `src/lib/deep-diagnosis.functions.ts`
@@ -45,11 +45,10 @@ The main AI server functions are:
 | `src/routes/survey.tsx` | `/survey` | Quick energy survey |
 | `src/routes/long-form.tsx` | `/long-form` | Paid deep analysis workspace |
 | `src/routes/scan.tsx` | `/scan` | Room photo upload |
-| `src/routes/scan.result.tsx` | `/scan/result` | AI room analysis result |
-| `src/routes/recommendations.tsx` | `/recommendations` | AI action plan |
+| `src/routes/scan_.result.tsx` | `/scan/result` | room analysis result |
+| `src/routes/recommendations.tsx` | `/recommendations` | Energy-Saving Plan |
 | `src/routes/monitoring.tsx` | `/monitoring` | Consumption dashboard |
 | `src/routes/pricing.tsx` | `/pricing` | Pricing and waitlist |
-| `src/routes/report.tsx` | `/report` | Printable monthly report |
 | `src/routes/s.$slug.tsx` | `/s/:slug` | Public savings share card |
 | `src/routes/k.$slug.tsx` | `/k/:slug` | Public smart kit page |
 

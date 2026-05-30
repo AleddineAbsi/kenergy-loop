@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, Lock, LogOut, Menu, ShieldCheck, User, X, Zap } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Lock, LogOut, Menu, Moon, ShieldCheck, Sun, User, X, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccess } from "@/hooks/use-access";
 
@@ -24,24 +24,11 @@ export function SiteNav() {
   const primaryLinks: NavLink[] = [
     { to: "/scan", label: "Scan-a-Room" },
     { to: "/survey", label: "Quick Survey" },
+    { to: "/long-form", label: "Deep Analysis", locked: !access.hasDeepAnalysis },
+    { to: "/monitoring", label: "Monitor" },
   ];
 
   const navGroups: NavGroup[] = [
-    {
-      label: "Plan",
-      links: [
-        { to: "/recommendations", label: "Actions" },
-        { to: "/long-form", label: "Deep Analysis", locked: !access.hasDeepAnalysis },
-        { to: "/report", label: "Report" },
-      ],
-    },
-    {
-      label: "Track",
-      links: [
-        { to: "/monitoring", label: "Monitor" },
-        { to: "/admin/monitoring", label: "Fleet", adminOnly: true },
-      ],
-    },
     {
       label: "Account",
       links: [
@@ -63,7 +50,7 @@ export function SiteNav() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
             <Zap className="h-4 w-4" />
           </span>
-          <span>Kenergy</span>
+          <span>Kenergy Loop</span>
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           {visiblePrimary.map((l) => (
@@ -113,6 +100,7 @@ export function SiteNav() {
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           {loading ? null : user ? (
             <>
               <Link
@@ -185,6 +173,9 @@ export function SiteNav() {
               </div>
             ))}
             <div className="my-2 h-px bg-border" />
+            <div className="px-3 py-2">
+              <ThemeToggle className="w-full justify-center" />
+            </div>
             {user ? (
               <>
                 <Link
@@ -219,10 +210,48 @@ export function SiteNav() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/60 py-8">
+    <footer className="relative z-10 border-t border-border/60 bg-card/95 py-8 text-card-foreground shadow-[var(--shadow-soft)] backdrop-blur">
       <div className="mx-auto max-w-6xl px-4 text-sm text-muted-foreground">
-        Kenergy — AI energy optimizer for smart home appliances. Estimates only; not professional advice.
+        <span className="font-semibold text-foreground">Kenergy Loop</span> — Smart home energy-saving assistant. Estimates only; not professional advice.
       </div>
     </footer>
+  );
+}
+
+function ThemeToggle({ className = "" }: { className?: string }) {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("kenergy-loop-theme");
+    const initial =
+      stored === "dark" || stored === "light"
+        ? stored
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    setTheme(initial);
+    document.documentElement.classList.toggle("dark", initial === "dark");
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+    window.localStorage.setItem("kenergy-loop-theme", next);
+  }
+
+  const dark = theme === "dark";
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className={`inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground ${className}`}
+      aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
+      title={`Switch to ${dark ? "light" : "dark"} mode`}
+    >
+      {dark ? <Sun className="h-4 w-4 text-primary" /> : <Moon className="h-4 w-4 text-primary" />}
+      <span className="hidden lg:inline">{dark ? "Light" : "Dark"}</span>
+    </button>
   );
 }

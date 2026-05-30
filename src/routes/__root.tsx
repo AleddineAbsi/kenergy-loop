@@ -74,14 +74,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kenergy" },
-      { name: "description", content: "AI energy optimizer for smart home appliances." },
-      { name: "author", content: "Kenergy" },
-      { property: "og:title", content: "Kenergy" },
-      { property: "og:description", content: "AI energy optimizer for smart home appliances." },
+      { title: "Kenergy Loop" },
+      { name: "description", content: "Smart home energy-saving assistant." },
+      { name: "author", content: "Kenergy Loop" },
+      { property: "og:title", content: "Kenergy Loop" },
+      { property: "og:description", content: "Smart home energy-saving assistant." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Kenergy" },
+    { name: "twitter:site", content: "Kenergy Loop" },
     ],
     links: [
       {
@@ -98,8 +98,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("kenergy-loop-theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch(e){}`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>

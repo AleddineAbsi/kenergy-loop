@@ -1,33 +1,30 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   Sparkles,
-  TrendingDown,
-  Leaf,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { saveSurveyResponse, loadSurveyResponse } from "@/lib/responses";
-import { estimateSurvey, type SurveyEstimate } from "@/lib/survey-estimate.functions";
+import { estimateSurvey } from "@/lib/survey-estimate.functions";
 
 export const Route = createFileRoute("/survey")({
   head: () => ({
     meta: [
-      { title: "60-second Energy Profile — Kenergy" },
+      { title: "60-second Energy Profile — Kenergy Loop" },
       {
         name: "description",
         content:
-          "Answer 6 quick questions and unlock a personalized AI Energy Profile plus a smart home kit tailored to your home.",
+          "Answer 12 quick questions and unlock a personalized Energy Profile plus a smart home kit tailored to your home.",
       },
-      { property: "og:title", content: "60-second Energy Profile — Kenergy" },
+      { property: "og:title", content: "60-second Energy Profile — Kenergy Loop" },
       {
         property: "og:description",
-        content: "6 quick questions, personalized AI action plan, custom smart home kit preview.",
+        content: "12 quick questions, personalized Energy-Saving Plan, custom smart home kit preview.",
       },
     ],
   }),
@@ -35,6 +32,7 @@ export const Route = createFileRoute("/survey")({
 });
 
 type Answers = Record<string, string>;
+const SURVEY_DRAFT_KEY = "kenergy.quickSurveyAnswers";
 
 type Question =
   | {
@@ -81,6 +79,12 @@ const questions: Question[] = [
     options: ["Rent", "Own", "Other"],
   },
   {
+    id: "place_type",
+    q: "What do you want to estimate?",
+    type: "choice",
+    options: ["Room", "Apartment / Wohnung", "House"],
+  },
+  {
     id: "size_m2",
     q: "Approximate size?",
     type: "number",
@@ -94,10 +98,22 @@ const questions: Question[] = [
     placeholder: "1, 2, 3…",
   },
   {
+    id: "building_age",
+    q: "Building year or age?",
+    type: "text",
+    placeholder: "1970s, around 2005, old building, I don't know",
+  },
+  {
     id: "heating",
     q: "Heating type?",
     type: "text",
     placeholder: "gas, district heating, electric, heat pump, radiators but not sure",
+  },
+  {
+    id: "hot_water",
+    q: "Hot water type?",
+    type: "text",
+    placeholder: "central, electric boiler, gas boiler, I don't know",
   },
   {
     id: "issue",
@@ -117,21 +133,43 @@ const questions: Question[] = [
     otherId: "issue_other",
     otherLabel: "Describe your issue",
   },
+  {
+    id: "devices",
+    q: "Which devices do you use often?",
+    type: "text",
+    placeholder: "gaming PC, laptop, monitors, TV, electric heater, AC, dehumidifier, dryer…",
+  },
+  {
+    id: "spend",
+    q: "Roughly how much do you pay monthly?",
+    type: "dual-number",
+    fields: [
+      { id: "electricity_eur", label: "Electricity", placeholder: "€ / month" },
+      { id: "heating_eur", label: "Heating", placeholder: "€ / month" },
+    ],
+    skippable: true,
+  },
+  {
+    id: "budget",
+    q: "Budget for improvements?",
+    type: "choice",
+    options: ["€0", "Up to €50", "Up to €250", "More than €250"],
+  },
 ];
 
 function SurveyPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [answers, setAnswers] = useState<Answers>(() => loadLocalSurveyAnswers());
   const startedAt = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!user) return;
     loadSurveyResponse().then((row) => {
       if (row?.answers && typeof row.answers === "object") {
-        setAnswers(row.answers as Answers);
+        const saved = row.answers as Answers;
+        setAnswers(saved);
+        saveLocalSurveyAnswers(saved);
       }
     });
   }, [user]);
@@ -141,7 +179,11 @@ function SurveyPage() {
   const done = step >= total;
 
   function setField(id: string, value: string) {
-    setAnswers((prev) => ({ ...prev, [id]: value }));
+    setAnswers((prev) => {
+      const next = { ...prev, [id]: value };
+      saveLocalSurveyAnswers(next);
+      return next;
+    });
   }
 
   function advance() {
@@ -164,22 +206,12 @@ function SurveyPage() {
     return !!v && v.trim().length > 0;
   }
 
-  useEffect(() => {
-    if (!done || !user) return;
-    const seconds = Math.round((Date.now() - startedAt.current) / 1000);
-    setSaveState("saving");
-    saveSurveyResponse(answers, seconds)
-      .then(() => setSaveState("saved"))
-      .catch(() => setSaveState("error"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, user]);
-
   const progress = ((step + (isCurrentValid() ? 1 : 0)) / total) * 100;
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <SiteNav />
-      <main className="mx-auto max-w-xl px-4 py-12 sm:py-16">
+      <main className="mx-auto w-full max-w-xl flex-1 px-4 py-12 sm:py-16">
         {!done && current && (
           <>
             <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -198,7 +230,7 @@ function SurveyPage() {
             <section className="mt-10">
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{current.q}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Answer at least 5 of 6 questions to get an instant free estimate.
+                Answer at least 5 questions to get an instant free estimate. More answers make the plan sharper.
               </p>
 
               <div className="mt-6">
@@ -241,16 +273,14 @@ function SurveyPage() {
         )}
 
         {done && (
-          <ResultScreen
+          <FinalizingSurvey
             answers={answers}
-            user={user}
-            saveState={saveState}
+            secondsTaken={Math.round((Date.now() - startedAt.current) / 1000)}
             onRestart={() => {
-              setAnswers({});
+              saveLocalSurveyAnswers(answers);
               setStep(0);
               startedAt.current = Date.now();
             }}
-            onContinue={() => navigate({ to: "/recommendations" })}
           />
         )}
       </main>
@@ -370,235 +400,101 @@ function QuestionField({
   );
 }
 
-/* ---------- Result screen ---------- */
+/* ---------- Direct handoff to recommendations ---------- */
 
-function ResultScreen({
+function FinalizingSurvey({
   answers,
-  user,
-  saveState,
+  secondsTaken,
   onRestart,
-  onContinue,
 }: {
   answers: Answers;
-  user: ReturnType<typeof useAuth>["user"];
-  saveState: "idle" | "saving" | "saved" | "error";
+  secondsTaken: number;
   onRestart: () => void;
-  onContinue: () => void;
 }) {
+  const navigate = useNavigate();
   const estimate = useServerFn(estimateSurvey);
-  const query = useQuery<SurveyEstimate>({
-    queryKey: ["survey-estimate", JSON.stringify(answers)],
-    queryFn: () => estimate({ data: { answers } }),
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
+  const started = useRef(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (query.isPending) {
-    return (
-      <section className="mt-10 rounded-3xl border border-border bg-card p-10 text-center shadow-[var(--shadow-soft)]">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-        <p className="mt-3 text-sm text-muted-foreground">
-          The AI is analyzing your answers…
-        </p>
-      </section>
-    );
-  }
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    async function finish() {
+      try {
+        await saveSurveyResponse(answers, secondsTaken);
+        const result = await estimate({ data: { answers } });
+        if (!result.can_estimate) {
+          throw new Error(result.message);
+        }
+        window.sessionStorage.setItem(
+          "kenergy.quickSurveyEstimate",
+          JSON.stringify({ answers, estimate: result, generatedAt: new Date().toISOString() }),
+        );
+        navigate({ to: "/recommendations" });
+      } catch (e) {
+        started.current = false;
+        setError(e instanceof Error ? e.message : "Couldn't generate your recommendations.");
+      }
+    }
+    finish();
+  }, [answers, estimate, navigate, secondsTaken]);
 
-  if (query.isError) {
+  if (error) {
     return (
       <section className="mt-10 rounded-3xl border border-destructive/30 bg-destructive/5 p-8 text-center">
         <AlertTriangle className="mx-auto h-6 w-6 text-destructive" />
-        <p className="mt-2 text-sm text-destructive">
-          {(query.error as Error)?.message ?? "Couldn't generate your estimate."}
-        </p>
-        <button
-          onClick={() => query.refetch()}
-          className="mt-4 rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
-        >
-          Try again
-        </button>
-      </section>
-    );
-  }
-
-  const est = query.data!;
-
-  if (!est.can_estimate) {
-    return (
-      <section className="mt-6 space-y-6">
-        <div className="rounded-3xl border border-border bg-card p-8 text-center shadow-[var(--shadow-soft)]">
-          <div className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" /> Not enough info
-          </div>
-          <h2 className="mt-3 text-xl font-semibold">I need a bit more to work with</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{est.message}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button
-              onClick={onRestart}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-            >
-              Answer a few more
-            </button>
-            <Link
-              to="/long-form"
-              className="rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
-            >
-              Try the deeper profile →
-            </Link>
-          </div>
+        <p className="mt-2 text-sm text-destructive">{error}</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <button
+            onClick={() => {
+              setError(null);
+              started.current = false;
+            }}
+            className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
+          >
+            Try again
+          </button>
+          <button
+            onClick={onRestart}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+          >
+            Edit answers
+          </button>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="mt-6 space-y-6">
-      <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-card to-accent/10 p-6 text-center shadow-[var(--shadow-soft)] sm:p-8">
-        <div className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Your AI Energy Profile
-        </div>
-        <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
-          Potential yearly savings
-        </div>
-        <div className="mt-1 text-5xl font-extrabold tracking-tight text-primary sm:text-6xl">
-          €{Math.round(est.potential_eur_saved_per_year)}
-          <span className="ml-1 align-middle text-base font-medium text-muted-foreground">
-            / year
-          </span>
-        </div>
-        <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
-          <TrendingDown className="h-3 w-3" /> after your AI action plan
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-background/70 p-3">
-            <div className="text-xs text-muted-foreground">Current use (est.)</div>
-            <div className="text-lg font-bold text-foreground">
-              {Math.round(est.current_kwh_per_year)} kWh
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              ≈ €{Math.round(est.current_eur_per_year)} / year
-            </div>
-          </div>
-          <div className="rounded-xl bg-background/70 p-3">
-            <div className="text-xs text-muted-foreground">Potential kWh saved</div>
-            <div className="text-lg font-bold text-foreground">
-              {Math.round(est.potential_kwh_saved_per_year)} kWh
-            </div>
-            <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-              <Leaf className="h-3 w-3" /> {Math.round(est.co2_kg_saved_per_year)} kg CO₂
-            </div>
-          </div>
-        </div>
-
-        <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
-          {est.message} · data quality: {est.data_quality}
-        </p>
-
-        {user ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            {saveState === "saving" && "Saving your answers…"}
-            {saveState === "saved" && "✓ Saved to your profile"}
-            {saveState === "error" && "Couldn't save — try again later."}
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-muted-foreground">
-            <Link to="/login" className="text-primary hover:underline">
-              Sign in
-            </Link>{" "}
-            to save this estimate and unlock your full AI action plan.
-          </p>
-        )}
-
-        <button
-          onClick={onContinue}
-          className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)]"
-        >
-          See my AI recommendations <ArrowRight className="h-4 w-4" />
-        </button>
+    <section className="mt-10 rounded-3xl border border-border bg-card p-10 text-center shadow-[var(--shadow-soft)]">
+      <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+      <div className="mx-auto mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <Sparkles className="h-3.5 w-3.5" /> Building your recommended actions
       </div>
-
-      {est.top_recommendations.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Top quick wins from your answers
-          </h2>
-          <ul className="mt-3 space-y-3">
-            {est.top_recommendations.map((r, i) => (
-              <li key={i} className="rounded-xl border border-border bg-background/60 p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="text-sm font-semibold">{r.title}</div>
-                  <div className="shrink-0 text-sm font-semibold text-primary">
-                    ~€{Math.round(r.savings_eur_per_year)}/yr
-                  </div>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">{r.why}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold">Want sharper numbers?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The deeper profile asks about appliances, usage patterns and (optionally) your
-              latest bill so the AI can ground its plan in your real consumption.
-            </p>
-            <Link
-              to="/long-form"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-            >
-              Open the deeper analysis <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-        <div className="relative mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <div className="pointer-events-none select-none blur-[3px]">
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary">Advanced recommendation preview</div>
-            <h3 className="mt-2 text-lg font-semibold">Install smart radiator thermostats in high-use rooms</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Based on the limited survey data, Kenergy can estimate room-by-room heating controls,
-              required permissions, product cost, and payback once deeper analysis fills the missing assumptions.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-lg bg-background/70 p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Advanced saving potential</div>
-                <div className="mt-0.5 font-semibold">up to €180/year</div>
-              </div>
-              <div className="rounded-lg bg-background/70 p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Compared with free quick wins</div>
-                <div className="mt-0.5 font-semibold">up to +€120/year</div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute inset-0 grid place-items-center rounded-2xl bg-background/70 p-4 backdrop-blur-[2px]">
-            <div className="text-center">
-              <div className="text-sm font-semibold">Unlock paid deeper analysis</div>
-              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                Advanced recommendations use your survey, guessed missing information, and optional bill/photo data to estimate up to larger yearly savings.
-              </p>
-              <Link to="/checkout/deep-analysis" className="mt-3 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
-                Open paid deeper analysis <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="text-center">
-        <button
-          onClick={onRestart}
-          className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-        >
-          Start the survey over
-        </button>
-      </div>
+      <p className="mx-auto mt-3 max-w-sm text-sm text-muted-foreground">
+        Kenergy Loop is turning your survey answers into a direct saving plan with yearly saving potential.
+      </p>
     </section>
   );
+}
+
+function loadLocalSurveyAnswers(): Answers {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SURVEY_DRAFT_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as Answers) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalSurveyAnswers(answers: Answers) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SURVEY_DRAFT_KEY, JSON.stringify(answers));
+  } catch {
+    // Ignore storage failures; the survey still works without draft persistence.
+  }
 }

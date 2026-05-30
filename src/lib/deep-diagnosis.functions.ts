@@ -1,6 +1,6 @@
-// Deep (paid) AI diagnosis: extends the regular action plan with concrete
+// Deep (paid) Energy Check: extends the regular saving plan with concrete
 // product picks and an interoperable ecosystem kit. History is kept so old
-// diagnoses can be viewed without re-running the AI.
+// diagnoses can be viewed without re-running the check.
 import { createServerFn } from "@tanstack/react-start";
 import { createHash } from "crypto";
 import { z } from "zod";
@@ -31,6 +31,8 @@ export type ProductPick = {
   why: string;
   api_capability: string; // "Matter | Zigbee | Local API | Cloud webhook | None"
   dashboard_ready: boolean;
+  product_url?: string;
+  sponsored?: boolean;
 };
 
 export type EcosystemKit = {
@@ -42,6 +44,33 @@ export type EcosystemKit = {
   interoperability: string;
 };
 
+export type DeepRecommendedAction = {
+  id: string;
+  title: string;
+  category: "do_now" | "small_helper" | "monitor" | "add_info" | "needs_landlord" | "needs_technician" | "product";
+  effort: "easy" | "medium" | "hard";
+  savings_eur_per_year: number;
+  confidence: number;
+  why: string;
+  how_it_works: string;
+  how_to_proceed: string;
+  requires_landlord: boolean;
+  requires_technician: boolean;
+  product?: ProductPick;
+  sources?: Array<{ label: string; url?: string }>;
+};
+
+export type EcosystemPack = {
+  id: string;
+  name: string;
+  solves_action_ids: string[];
+  description: string;
+  total_eur: number;
+  yearly_savings_eur: number;
+  items: ProductPick[];
+  vendor_url?: string;
+};
+
 export type DeepDiagnosisPlan = {
   summary: string;
   yearly_savings_eur: number;
@@ -51,6 +80,8 @@ export type DeepDiagnosisPlan = {
   goal_alignment: string;
   product_picks: ProductPick[];
   ecosystem_kit: EcosystemKit | null;
+  recommended_actions?: DeepRecommendedAction[];
+  ecosystem_packs?: EcosystemPack[];
   next_steps: string[];
   data_quality: "low" | "medium" | "high";
   model?: string;
@@ -69,7 +100,7 @@ const diagnosisTool = {
   type: "function" as const,
   function: {
     name: "return_deep_diagnosis",
-    description: "Return a paid in-depth energy diagnosis with concrete product picks and an interoperable ecosystem kit.",
+    description: "Return a paid in-depth Energy Report with concrete product picks and an interoperable ecosystem kit.",
     parameters: {
       type: "object",
       properties: {
@@ -81,6 +112,71 @@ const diagnosisTool = {
         goal_alignment: { type: "string", description: "How the plan matches the user's stated goal (cost/CO2/comfort)." },
         data_quality: { type: "string", enum: ["low", "medium", "high"] },
         next_steps: { type: "array", items: { type: "string" } },
+        recommended_actions: {
+          type: "array",
+          description:
+            "Ranked saving plan sorted from least friction to most friction. Include DIY actions, product actions, at least one landlord approval action, and at least one technician action for the demo.",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              title: { type: "string" },
+              category: {
+                type: "string",
+                enum: ["do_now", "small_helper", "monitor", "add_info", "needs_landlord", "needs_technician", "product"],
+              },
+              effort: { type: "string", enum: ["easy", "medium", "hard"] },
+              savings_eur_per_year: { type: "number" },
+              confidence: { type: "number", description: "0-100. Assumption-heavy landlord/product/technician demo actions should be lower confidence." },
+              why: { type: "string" },
+              how_it_works: { type: "string" },
+              how_to_proceed: { type: "string" },
+              requires_landlord: { type: "boolean" },
+              requires_technician: { type: "boolean" },
+              product: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  category: { type: "string" },
+                  tier: { type: "string", enum: ["budget", "balanced", "integrated"] },
+                  name: { type: "string" },
+                  brand_examples: { type: "string" },
+                  price_eur: { type: "number" },
+                  why: { type: "string" },
+                  api_capability: { type: "string" },
+                  dashboard_ready: { type: "boolean" },
+                  product_url: { type: "string" },
+                  sponsored: { type: "boolean" },
+                },
+              },
+              sources: {
+                type: "array",
+                description: "Only sources needed for this specific action. Use external public sources, not internal Kenergy Loop context.",
+                items: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string" },
+                    url: { type: "string" },
+                  },
+                  required: ["label"],
+                },
+              },
+            },
+            required: [
+              "id",
+              "title",
+              "category",
+              "effort",
+              "savings_eur_per_year",
+              "confidence",
+              "why",
+              "how_it_works",
+              "how_to_proceed",
+              "requires_landlord",
+              "requires_technician",
+            ],
+          },
+        },
         product_picks: {
           type: "array",          description:
             "Concrete product picks. Group across tiers: budget (cheapest viable), balanced (best value), integrated (works inside an open ecosystem like Matter / Home Assistant). Only include picks that are genuinely useful for THIS user.",
@@ -95,7 +191,9 @@ const diagnosisTool = {
               price_eur: { type: "number" },
               why: { type: "string" },
               api_capability: { type: "string", description: "Matter | Zigbee | Local API | Cloud webhook | None." },
-              dashboard_ready: { type: "boolean", description: "True if it exposes data we can later plot in the Kenergy dashboard." },
+              dashboard_ready: { type: "boolean", description: "True if it exposes data we can later plot in the Kenergy Loop dashboard." },
+              product_url: { type: "string", description: "Vendor, manufacturer, or search URL for the product." },
+              sponsored: { type: "boolean", description: "True when this is a demo sponsored product suggestion." },
             },
             required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],          },
         },
@@ -121,11 +219,50 @@ const diagnosisTool = {
                   why: { type: "string" },
                   api_capability: { type: "string" },
                   dashboard_ready: { type: "boolean" },
+                  product_url: { type: "string" },
+                  sponsored: { type: "boolean" },
                 },
                 required: ["id", "category", "tier", "name", "brand_examples", "price_eur", "why", "api_capability", "dashboard_ready"],              },
             },
           },
           required: ["name", "description", "hub", "interoperability", "total_eur", "items"],        },
+        ecosystem_packs: {
+          type: "array",
+          description:
+            "Bundles that solve multiple recommended_actions together. Each pack should reference the action ids it solves and include vendor links when possible.",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              solves_action_ids: { type: "array", items: { type: "string" } },
+              description: { type: "string" },
+              total_eur: { type: "number" },
+              yearly_savings_eur: { type: "number" },
+              vendor_url: { type: "string" },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    category: { type: "string" },
+                    tier: { type: "string", enum: ["budget", "balanced", "integrated"] },
+                    name: { type: "string" },
+                    brand_examples: { type: "string" },
+                    price_eur: { type: "number" },
+                    why: { type: "string" },
+                    api_capability: { type: "string" },
+                    dashboard_ready: { type: "boolean" },
+                    product_url: { type: "string" },
+                    sponsored: { type: "boolean" },
+                  },
+                },
+              },
+            },
+            required: ["id", "name", "solves_action_ids", "description", "total_eur", "yearly_savings_eur", "items"],
+          },
+        },
       },
       required: [
         "summary",
@@ -167,25 +304,35 @@ export const generateDeepDiagnosis = createServerFn({ method: "POST" })
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
       const isPrivileged = (roles ?? []).some((r) => r.role === "admin" || r.role === "paid");
       if (!isPrivileged) {
-        throw new Error("No diagnosis credit available. Purchase a Deep Analysis to continue.");
+        throw new Error("No analysis credit available. Purchase a Deep Analysis to continue.");
       }
     }
 
     const ai = getAIConfig();
 
-    const systemPrompt = `You are Kenergy Deep, an in-depth AI energy diagnostic for European homes (EUR, kWh, ~0.30 €/kWh, ~0.22 kg CO2/kWh).
-You have access to: the quick survey, the long-form profile, a list of uploaded bills/appliance photos (filename labels only), and free-form user notes.
-Produce ONLY genuinely useful, ranked product picks. NEVER pad categories. Always reply via the return_deep_diagnosis tool.
+    const systemPrompt = `You are Kenergy Loop Deep, an in-depth energy consultant for European homes (EUR, kWh, ~0.30 EUR/kWh, ~0.22 kg CO2/kWh).
+Always reply through the return_deep_diagnosis tool.
 
-Rules:
-- Tier each pick clearly: budget (cheapest viable), balanced (best €/€ saved), integrated (works in an open ecosystem we can later plot in the Kenergy dashboard).
-- Ecosystem kit: ONLY include if devices truly interoperate (Matter, Home Assistant Green + Zigbee2MQTT, Hue Bridge, AVM FRITZ!Box, etc.). Otherwise return null.
+Create a ranked recommended_actions list as the main output, using the same structure as the quick survey but richer:
+- Sort from least friction to most friction: do_now, small_helper, monitor, add_info, needs_landlord, needs_technician. Product-buy actions can sit in small_helper or product.
+- Return 8-12 actions when possible.
+- For pitch/demo visibility, include at least one landlord approval action, one technician action, and two concrete product-buy actions even if confidence is low.
+- Include at least one add_info action with the exact missing information to ask for (bill amount, meter reading, appliance nameplate, tariff, room size, landlord contact, etc.).
+- Never contradict user-provided facts. If you infer something, start the why/how_to_proceed with "Assumption:" and keep confidence low (35-58).
+- Put concrete product suggestions directly inside the relevant action.product. Use product_url when you know a manufacturer/vendor/search URL. Mark one tasteful sponsored=true demo suggestion if useful.
+- Sources must be external public links only, and only the sources necessary for that specific action. Do not cite internal Kenergy Loop/user data as a source.
+- Build ecosystem_packs from action ids: a pack should solve multiple actions together, list items, total price, yearly_savings_eur, and a vendor/search link.
 - api_capability must reflect reality (Matter, Zigbee, Local API, Cloud webhook, None).
-- dashboard_ready=true means the device exposes data we can poll/subscribe to later. Be honest.
-- Align next_steps with the user's stated GOAL (cost vs CO2 vs comfort) and honor any preferences from the notes.
-- data_quality reflects how much info you actually got — be honest.`;
+- dashboard_ready=true means the device exposes data we can later plot in the Kenergy Loop dashboard.
+- data_quality reflects how much info you actually got. Be honest.`;
 
-    const userPrompt = `Survey:\n${JSON.stringify(survey?.answers ?? {}, null, 2)}\n\nLong-form profile (${longForm?.progress ?? 0}%):\n${JSON.stringify(longForm?.answers ?? {}, null, 2)}\n\nUploads:\n${JSON.stringify(uploads ?? [], null, 2)}\n\nUser notes:\n${notes || "(none)"}`;
+    const userPrompt = JSON.stringify({
+      survey: survey?.answers ?? {},
+      long_form_progress: longForm?.progress ?? 0,
+      long_form: longForm?.answers ?? {},
+      uploads: uploads ?? [],
+      notes: notes || "(none)",
+    });
 
     const res = await fetch(ai.url, {
       method: "POST",
@@ -197,27 +344,27 @@ Rules:
           { role: "user", content: userPrompt },
         ],
         tools: [diagnosisTool],
-        tool_choice: "auto",
+        tool_choice: { type: "function", function: { name: "return_deep_diagnosis" } },
       }),
     });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("AI rate limit — please retry in a minute.");
-      if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
-      console.error("AI gateway error", res.status, text);
-      throw new Error(`AI gateway failed (${res.status})`);
+      if (res.status === 429) throw new Error("Model rate limit — please retry in a minute.");
+      if (res.status === 402) throw new Error("model credits exhausted. Add credits in Settings → Workspace → Usage.");
+      console.error("model gateway error", res.status, text);
+      throw new Error(`model gateway failed (${res.status})`);
     }
 
     const completion = await res.json();
     const toolCall = completion?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) throw new Error("AI did not return a structured diagnosis");
+    if (!toolCall?.function?.arguments) throw new Error("The model did not return a structured Energy Report");
 
     let plan: DeepDiagnosisPlan;
     try {
       plan = JSON.parse(toolCall.function.arguments);
     } catch {
-      throw new Error("AI returned malformed JSON");
+      throw new Error("The model returned malformed JSON");
     }
     plan.model = ai.model;
     plan.generated_at = new Date().toISOString();
@@ -235,7 +382,7 @@ Rules:
       })
       .select("id, created_at, inputs_hash, notes, plan")
       .single();
-    if (error || !inserted) throw new Error(error?.message ?? "Failed to save diagnosis");
+    if (error || !inserted) throw new Error(error?.message ?? "Failed to save Energy Report");
 
     return {
       id: inserted.id,

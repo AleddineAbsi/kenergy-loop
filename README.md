@@ -4,6 +4,8 @@ Kenergy Loop is a hackathon prototype for renter-first energy savings. It was bu
 
 Kenergy Loop starts with low-friction inputs, then turns them into practical saving actions, product suggestions, and monitoring.
 
+This prototype was generated and iterated with AI-assisted development tools, especially OpenAI Codex and Lovable.
+
 ## What It Does
 
 - Scan a room photo and estimate visible appliance energy load.
@@ -12,6 +14,15 @@ Kenergy Loop starts with low-friction inputs, then turns them into practical sav
 - Offer deeper analysis with product recommendations, landlord email previews, technician flow mockups, and smart-home bundle suggestions.
 - Show a monitoring dashboard with simulated appliance loads, weekly trends, alerts, recent readings, and replacement suggestions.
 - Support light and dark mode.
+
+## Hook And Retention Strategy
+
+Kenergy Loop is designed to start with curiosity, not a long audit form:
+
+- Social hook: the room scan gives a simple, shareable energy percentile and visible device breakdown that users can post or show to friends.
+- Fast conversion: after the scan, the 60-second survey asks only enough to produce a better saving plan without losing attention.
+- Retention loop: users come back to improve confidence with bills, readings, photos, deeper checks, and monitoring proof.
+- Monetization bridge: free advice builds trust first; paid value appears when users want sharper numbers, history, alerts, reports, and product bundles.
 
 ## How Decisions Work
 
@@ -128,6 +139,8 @@ The app keeps calls separated so a quick survey does not pay for the deeper anal
 ## License
 
 MIT License. Use it, fork it, modify it, reuse the idea, or build something commercial from it. No permission needed.
+
+See [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) for third-party libraries, services, and credits.
 
 ## Disclaimer
 

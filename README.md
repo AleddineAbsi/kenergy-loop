@@ -8,10 +8,7 @@ This prototype was generated and iterated with AI-assisted development tools, es
 
 ## Demo
 
-<video src="docs/assets/demo.mp4" controls width="100%">
-  Your browser does not support embedded video. You can watch it here:
-  <a href="docs/assets/demo.mp4">docs/assets/demo.mp4</a>
-</video>
+https://github.com/AleddineAbsi/kenergy-loop/raw/main/docs/assets/demo.mp4
 
 ## What It Does
 

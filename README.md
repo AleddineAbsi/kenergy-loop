@@ -1,3 +1,7 @@
+## Demo
+
+https://github.com/user-attachments/assets/5650544f-ed1d-43da-abe6-f2e0608ca4cb
+
 # Kenergy Loop
 
 Kenergy Loop is a hackathon prototype for renter-first energy savings. It was built during a hackathon sprint around a simple problem: renters pay energy bills, but most energy tools assume home ownership, renovations, smart meters, or expensive upgrades.
@@ -5,10 +9,6 @@ Kenergy Loop is a hackathon prototype for renter-first energy savings. It was bu
 Kenergy Loop starts with low-friction inputs, then turns them into practical saving actions, product suggestions, and monitoring.
 
 This prototype was generated and iterated with AI-assisted development tools, especially OpenAI Codex and Lovable.
-
-## Demo
-
-https://github.com/AleddineAbsi/kenergy-loop/raw/main/docs/assets/demo.mp4
 
 ## What It Does
 

@@ -1,6 +1,6 @@
 ## Demo
 
-https://github.com/user-attachments/assets/5650544f-ed1d-43da-abe6-f2e0608ca4cb
+https://github.com/user-attachments/assets/e623dee1-6ebf-4e52-b925-5db8e4c67bb0
 
 # Kenergy Loop
 

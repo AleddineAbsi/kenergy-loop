@@ -6,6 +6,13 @@ Kenergy Loop starts with low-friction inputs, then turns them into practical sav
 
 This prototype was generated and iterated with AI-assisted development tools, especially OpenAI Codex and Lovable.
 
+## Demo
+
+<video src="docs/assets/demo.mp4" controls width="100%">
+  Your browser does not support embedded video. You can watch it here:
+  <a href="docs/assets/demo.mp4">docs/assets/demo.mp4</a>
+</video>
+
 ## What It Does
 
 - Scan a room photo and estimate visible appliance energy load.
